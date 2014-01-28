@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+	<comment>MDM Service Properties</comment>
+	<!-- BEGIN iOS Payload Properties -->
+	<entry key="CompanyLegalName">Solidra LLC</entry>
+	<entry key="CompanyShortName">Solidra</entry>
+	<entry key="ConfigProfileServiceName">com.mdm4all.mobileconfig.</entry>
+	<entry key="ScepServiceName">com.mdm4all.scep-service.</entry>
+	<entry key="WebClipServiceName">com.mdm4all.webclip-service.</entry>
+	<entry key="RemovePasswdService">com.mdm4all.passwd-service.</entry>
+	<entry key="PasscodePolicyService">com.mdm4all.passcode-policy-service.</entry>
+	<entry key="RestrictionsServiceName">com.mdm4all.restrictions-service.</entry>
+	<entry key="ApplockServiceName">com.mdm4all.applock-service.</entry>
+	<entry key="MdmServiceName">com.mdm4all.mdm-service.</entry>
+	<entry key="ScepContentName">EnrollmentCAInstance</entry>
+	<entry key="ScepCN">iOS Enrollment Service</entry>
+	<!-- TODO add override for scep URL -->
+	<!-- BEGIN REST API properties -->
+	<entry key="RootCertificateAuthorityStore">com.mdm.scep.DbRootCertificateAuthorityStore</entry>
+	<entry key="CrlUrlFormatString">http://mdm.mdm4all.com/crl/%1$s/</entry>
+	<entry key="EnrollUrlFormatString">http://mdm.mdm4all.com/enroll?id=%1$s/</entry>
+	<!-- BEGIN Data store properties -->
+	<entry key="RAX500NameFormatString">C=US,L=Woodside,ST=California,%1$s,OU=RA,CN=www.mdm4all.com/</entry>
+</properties>
