@@ -279,6 +279,11 @@ public class EnrollmentManager {
 	}
 	
 	public synchronized boolean isValidParentId(String parentId) {
-		return certManager.getCA(parentId) != null;
+		try {
+			certManager.getCA(parentId);
+			return true;
+		} catch (RootCertificateAuthorityException e) {
+		}
+		return false;
 	}
 }

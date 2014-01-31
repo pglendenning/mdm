@@ -22,4 +22,10 @@
 	<entry key="EnrollUrlFormatString">http://mdm.mdm4all.com/enroll?id=%1$s/</entry>
 	<!-- BEGIN Data store properties -->
 	<entry key="RAX500NameFormatString">C=US,L=Woodside,ST=California,%1$s,OU=RA,CN=www.mdm4all.com/</entry>
+	<!-- BEGIN AWS properties -->
+	<entry key="AWSAccessKeyId">AKIAJDQYCWS3ZRRPCC4A</entry>
+	<entry key="AWSSecretKey">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</entry>
+	<entry key="AWSSimpleDbRootCertificateAuthorityDomain">CaStoreDevel</entry>
+	<entry key="AWSSimpleDbRootCertificateAuthorityBucket">com.mdm4all.castoredevel</entry>
+	<entry key="PkiAccessKey">d3d9c6ae83d94fc0864424b358f13bb2</entry>
 </properties>

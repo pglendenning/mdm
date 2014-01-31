@@ -1,6 +1,8 @@
 package com.mdm.scep;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Date;
@@ -44,7 +46,11 @@ public class RootCertificateAuthorityManager {
 	 * @throws	RootCertificateAuthorityException
 	 */
 	public void deleteCA(RootCertificateAuthority ca) throws RootCertificateAuthorityException {
-		store.deleteCA(ca);
+		try {
+			store.deleteCA(ca);
+		} catch (GeneralSecurityException | IOException e) {
+			throw new RootCertificateAuthorityException(e);
+		}
 	}
 
 	/**
@@ -52,8 +58,12 @@ public class RootCertificateAuthorityManager {
 	 * @param	objectId	The object id.
 	 * @return	A RootCertificateAuthority or null if it does not exist.
 	 */
-	public RootCertificateAuthority getCA(String objectId) {
-		return store.getCA(objectId);
+	public RootCertificateAuthority getCA(String objectId) throws RootCertificateAuthorityException {
+		try {
+			return store.getCA(objectId);
+		} catch (GeneralSecurityException | IOException e) {
+			throw new RootCertificateAuthorityException(e);
+		}
 	}
 	
 	/**
@@ -62,8 +72,12 @@ public class RootCertificateAuthorityManager {
 	 * @param	iasn	The issuer and serial number.
 	 * @return	A RootCertificateAuthority or null if it does not exist.
 	 */
-	public RootCertificateAuthority getCA(IssuerAndSerialNumber iasn) {
-		return store.getCA(iasn);
+	public RootCertificateAuthority getCA(IssuerAndSerialNumber iasn) throws RootCertificateAuthorityException {
+		try {
+			return store.getCA(iasn);
+		} catch (GeneralSecurityException | IOException e) {
+			throw new RootCertificateAuthorityException(e);
+		}
 	}
 		
 	/**
