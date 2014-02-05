@@ -7,8 +7,8 @@ import javax.servlet.ServletContextListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mdm.api.EnrollmentManager;
-import com.mdm.scep.IRootCertificateAuthorityStore;
+import com.mdm.cert.ICertificateAuthorityStore;
+import com.mdm.cert.scep.EnrollmentManager;
 import com.mdm.utils.MdmServiceKey;
 import com.mdm.utils.MdmServiceProperties;
 
@@ -23,7 +23,7 @@ public final class ContextListener implements ServletContextListener {
 		context = event.getServletContext();
 		try {
 			MdmServiceProperties.Initialize(context);
-			enrollManager = new EnrollmentManager((IRootCertificateAuthorityStore)
+			enrollManager = new EnrollmentManager((ICertificateAuthorityStore)
 						MdmServiceProperties.constructObject(MdmServiceKey.rootCertificateAuthorityStore));
 		    context.setAttribute("enrollManager", enrollManager);
 		} catch (Exception e) {

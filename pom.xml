@@ -82,11 +82,6 @@
   		<version>2.5.1</version>
   	</dependency>
   	<dependency>
-  		<groupId>org.apache.jclouds</groupId>
-  		<artifactId>jclouds-all</artifactId>
-  		<version>1.7.0</version>
-  	</dependency>
-  	<dependency>
   		<groupId>com.amazonaws</groupId>
   		<artifactId>aws-java-sdk</artifactId>
   		<version>1.6.12</version>

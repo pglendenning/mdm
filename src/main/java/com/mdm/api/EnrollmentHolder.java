@@ -15,7 +15,7 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 import com.mdm.auth.PasscodeGenerator;
 import com.mdm.auth.PasscodeGenerator.Passcode;
-import com.mdm.scep.RootCertificateAuthority;
+import com.mdm.cert.CertificateAuthority;
 
 /**
  * Class holding the enrollment state of a device. 
@@ -52,14 +52,14 @@ public class EnrollmentHolder {
 	private long[] serialNums = null;
 	private PasscodeGenerator otpGenerator = null;
 	private PKCS10CertificationRequest signingRequest = null;
-	private RootCertificateAuthority signingCa = null;
+	private CertificateAuthority signingCa = null;
 	private X509Certificate signedRequest = null;
 	private String authorizedOTP = null;
 	private int state = E_STARTED;	
 	private int lastState = -1;
 	private long timestamp = 0;
 
-	public EnrollmentHolder(String parentId, RootCertificateAuthority parentCA, String enrollId, 
+	public EnrollmentHolder(String parentId, CertificateAuthority parentCA, String enrollId, 
 			long serialNum1, long serialNum2, String enrollURL, PasscodeGenerator otpGenerator) throws NoSuchAlgorithmException {
 		this.state = E_STARTED;
 		this.enrollId = enrollId;

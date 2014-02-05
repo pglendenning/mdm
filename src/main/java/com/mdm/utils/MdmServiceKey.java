@@ -9,8 +9,10 @@ public final class MdmServiceKey {
 	public static final String awsAccessKeyId = "AWSAccessKeyId";
 	public static final String awsSecretKey = "AWSSecretKey";
 	public static final String awsSimpleDbRootCertificateAuthorityDomain = "AWSSimpleDbRootCertificateAuthorityDomain";
-	public static final String awsSimpleDbRootCertificateAuthorityBucket = "AWSSimpleDbRootCertificateAuthorityBucket";
+	public static final String awsS3RootCertificateAuthorityBucket = "AWSS3RootCertificateAuthorityBucket";
 	public static final String pkiAccessKey = "PkiAccessKey";
+	public static final String awsSimpleDbIssuedCertificatesDomain = "AWSS3IssuedCertificatesDomain";
+	public static final String awsS3IssuedCertificatesBucket = "AWSSimpleDbIssuedCertificatesBucket";
 	
 	private MdmServiceKey() {
 		// TODO Auto-generated constructor stub

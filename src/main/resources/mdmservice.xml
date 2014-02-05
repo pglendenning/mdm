@@ -26,6 +26,8 @@
 	<entry key="AWSAccessKeyId">AKIAJDQYCWS3ZRRPCC4A</entry>
 	<entry key="AWSSecretKey">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</entry>
 	<entry key="AWSSimpleDbRootCertificateAuthorityDomain">CaStoreDevel</entry>
-	<entry key="AWSSimpleDbRootCertificateAuthorityBucket">com.mdm4all.castoredevel</entry>
+	<entry key="AWSS3RootCertificateAuthorityBucket">com.mdm4all.castoredevel</entry>
 	<entry key="PkiAccessKey">d3d9c6ae83d94fc0864424b358f13bb2</entry>
+	<entry key="AWSSimpleDbIssuedCertificatesDomain">IssuedStoreDevel</entry>
+	<entry key="AWSS3IssuedCertificatesBucket">com.mdm4all.issuedstoredevel</entry>
 </properties>

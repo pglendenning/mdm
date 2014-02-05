@@ -1,13 +1,13 @@
 package com.mdm.api;
 
-import com.mdm.scep.RootCertificateAuthority;
+import com.mdm.cert.CertificateAuthority;
 
 public class ParentDevice {
 	
 	private final String parentId;
-	private RootCertificateAuthority rootCA;
+	private CertificateAuthority rootCA;
 
-	public ParentDevice(String parentId, RootCertificateAuthority rootCA) {
+	public ParentDevice(String parentId, CertificateAuthority rootCA) {
 		this.parentId = parentId;
 		this.rootCA = rootCA;
 	}
@@ -16,7 +16,7 @@ public class ParentDevice {
 		return parentId;
 	}
 	
-	RootCertificateAuthority getRootCertificateAuthority() {
+	CertificateAuthority getRootCertificateAuthority() {
 		return rootCA;
 	}
 }

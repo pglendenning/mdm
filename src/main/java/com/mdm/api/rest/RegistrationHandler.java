@@ -16,10 +16,10 @@ import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import com.mdm.api.EnrollmentManager;
 import com.mdm.api.OperationFailedException;
 import com.mdm.api.RegisterParentRequestData;
-import com.mdm.scep.RootCertificateAuthorityException;
+import com.mdm.cert.CertificateAuthorityException;
+import com.mdm.cert.scep.EnrollmentManager;
 
 /** Handler for:
  * - POST:   /register
@@ -78,7 +78,7 @@ public class RegistrationHandler {
 			if (enrollManager.unregisterParentDevice(parentId)) {
 				return new String();
 			}
-		} catch (RootCertificateAuthorityException e) {
+		} catch (CertificateAuthorityException e) {
 			return String.format("Cannot unregister parent=%1$s", parentId);
 		}
 		throw new BadRequestException("Invalid parent=" + parentId);

@@ -5,13 +5,17 @@ import static org.easymock.EasyMock.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import static org.junit.Assert.fail;
+
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import com.mdm.scep.MdmScepServlet;
+
+import com.mdm.cert.scep.MdmScepServlet;
 import com.mdm.session.UrlRewriteFilter;
 import com.mdm.session.UrlRewriteRequestWrapper;
 import com.mdm.session.UrlRewriteResponseWrapper;
 import com.mdm.utils.X509CertificateGenerator;
+
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -20,6 +24,7 @@ import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

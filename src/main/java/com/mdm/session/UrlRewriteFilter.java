@@ -16,7 +16,7 @@ import javax.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mdm.scep.MdmScepServlet;
+import com.mdm.cert.scep.MdmScepServlet;
 
 import java.security.cert.X509Certificate;
 import java.util.LinkedList;

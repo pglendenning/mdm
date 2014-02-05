@@ -34,11 +34,11 @@ import com.mdm.api.EnrollDeviceResponseData;
 import com.mdm.api.EnrollStatusResponseData;
 import com.mdm.api.EnrolledDevicesResponseData;
 import com.mdm.api.EnrollmentHolder;
-import com.mdm.api.EnrollmentManager;
 import com.mdm.api.InternalErrorException;
 import com.mdm.api.InvalidObjectIdException;
 import com.mdm.api.OperationFailedException;
 import com.mdm.api.OperationNotAllowedException;
+import com.mdm.cert.scep.EnrollmentManager;
 import com.sun.ws.rest.api.NotFoundException;
 
 /** Handler for:
