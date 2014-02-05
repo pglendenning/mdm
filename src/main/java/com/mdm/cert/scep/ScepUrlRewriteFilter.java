@@ -1,4 +1,4 @@
-package com.mdm.scep;
+package com.mdm.cert.scep;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterConfig;

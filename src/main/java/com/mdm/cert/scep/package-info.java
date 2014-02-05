@@ -5,4 +5,4 @@
  * @author paul
  *
  */
-package com.mdm.scep;
+package com.mdm.cert.scep;

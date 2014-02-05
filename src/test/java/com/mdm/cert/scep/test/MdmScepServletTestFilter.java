@@ -1,4 +1,4 @@
-package com.mdm.scep.test;
+package com.mdm.cert.scep.test;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -20,7 +20,7 @@ import javax.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mdm.scep.MdmScepServlet;
+import com.mdm.cert.scep.MdmScepServlet;
 import com.mdm.utils.RSAKeyPair;
 import com.mdm.utils.X509CertificateGenerator;
 

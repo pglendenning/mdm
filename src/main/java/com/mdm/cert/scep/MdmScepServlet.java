@@ -1,4 +1,4 @@
-package com.mdm.scep;
+package com.mdm.cert.scep;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -68,6 +68,7 @@ import org.jscep.util.CertificationRequestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mdm.cert.IssuedCertificateIdentifier;
 import com.mdm.utils.MdmServiceProperties;
 
 /**

@@ -1,19 +1,19 @@
 /**
  * 
  */
-package com.mdm.scep;
+package com.mdm.cert;
 
 /**
  * @author paul
  */
-public class RootCertificateAuthorityException extends Exception {
+public class CertificateAuthorityException extends Exception {
 
 	private static final long serialVersionUID = 1L;
 
 	/**
 	 * Default constructor.
 	 */
-	public RootCertificateAuthorityException() {
+	public CertificateAuthorityException() {
 		// TODO Auto-generated constructor stub
 	}
 
@@ -21,7 +21,7 @@ public class RootCertificateAuthorityException extends Exception {
 	 * Construct with message.
 	 * @param message	The exception message.
 	 */
-	public RootCertificateAuthorityException(String message) {
+	public CertificateAuthorityException(String message) {
 		super(message);
 		// TODO Auto-generated constructor stub
 	}
@@ -29,7 +29,7 @@ public class RootCertificateAuthorityException extends Exception {
 	/**
 	 * @param cause
 	 */
-	public RootCertificateAuthorityException(Throwable cause) {
+	public CertificateAuthorityException(Throwable cause) {
 		super(cause);
 		// TODO Auto-generated constructor stub
 	}
@@ -38,7 +38,7 @@ public class RootCertificateAuthorityException extends Exception {
 	 * @param message
 	 * @param cause
 	 */
-	public RootCertificateAuthorityException(String message, Throwable cause) {
+	public CertificateAuthorityException(String message, Throwable cause) {
 		super(message, cause);
 		// TODO Auto-generated constructor stub
 	}
@@ -49,7 +49,7 @@ public class RootCertificateAuthorityException extends Exception {
 	 * @param enableSuppression
 	 * @param writableStackTrace
 	 */
-	public RootCertificateAuthorityException(String message, Throwable cause,
+	public CertificateAuthorityException(String message, Throwable cause,
 			boolean enableSuppression, boolean writableStackTrace) {
 		super(message, cause, enableSuppression, writableStackTrace);
 		// TODO Auto-generated constructor stub

@@ -1,4 +1,4 @@
-package com.mdm.scep;
+package com.mdm.cert.scep;
 
 import java.io.IOException;
 import javax.servlet.ServletConfig;

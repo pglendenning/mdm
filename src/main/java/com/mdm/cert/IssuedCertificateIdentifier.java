@@ -1,4 +1,4 @@
-package com.mdm.scep;
+package com.mdm.cert;
 
 import java.io.Serializable;
 

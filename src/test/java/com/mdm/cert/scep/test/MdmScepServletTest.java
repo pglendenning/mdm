@@ -1,4 +1,4 @@
-package com.mdm.scep.test;
+package com.mdm.cert.scep.test;
 
 import static org.junit.Assert.*;
 
@@ -43,7 +43,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mdm.scep.MdmScepServlet;
+import com.mdm.cert.scep.MdmScepServlet;
 import com.mdm.utils.MdmServiceProperties;
 import com.mdm.utils.RSAKeyPair;
 import com.mdm.utils.X509CertificateGenerator;

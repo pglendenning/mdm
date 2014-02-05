@@ -1,4 +1,4 @@
-package com.mdm.scep;
+package com.mdm.cert;
 
 import java.security.cert.X509CRL;
 import java.util.Date;
@@ -10,7 +10,7 @@ import java.util.Date;
  * securing the private key is stolen or lost.
  * @author paul
  */
-public class RootCertificateAuthorityRevokePoint {
+public class CertificateAuthorityRevokePoint {
 	
 	private	Date	notBefore;	// Not valid < 
 	private Date	notAfter;	// Not valid >=
@@ -22,7 +22,7 @@ public class RootCertificateAuthorityRevokePoint {
 	 * @param validTo	The date after which the revocation is invalid.
 	 * @param crl		The certificate revocation list.
 	 */
-	public RootCertificateAuthorityRevokePoint(Date validFrom, Date validTo, X509CRL crl) {
+	public CertificateAuthorityRevokePoint(Date validFrom, Date validTo, X509CRL crl) {
 		notBefore = validFrom;
 		notAfter = validTo;
 		crlst = crl;
