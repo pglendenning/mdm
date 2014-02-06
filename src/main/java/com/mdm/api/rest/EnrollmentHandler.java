@@ -38,7 +38,7 @@ import com.mdm.api.InternalErrorException;
 import com.mdm.api.InvalidObjectIdException;
 import com.mdm.api.OperationFailedException;
 import com.mdm.api.OperationNotAllowedException;
-import com.mdm.cert.scep.EnrollmentManager;
+import com.mdm.api.EnrollmentManager;
 import com.sun.ws.rest.api.NotFoundException;
 
 /** Handler for:

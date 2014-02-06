@@ -115,7 +115,7 @@ public class AwsCertificateAuthorityStore implements
 	 * {@inheritDoc}
 	 */
 	@Override
-	public CertificateAuthority createCA(X509Certificate caCert, IssuerAndSerialNumber caIasn, 
+	public CertificateAuthority addCA(X509Certificate caCert, IssuerAndSerialNumber caIasn, 
 			X509Certificate raCert, PrivateKey raKey, long nextSerialNumber,
 			boolean enabledState, String objectId) 
 			throws CertificateAuthorityException,
@@ -179,7 +179,7 @@ public class AwsCertificateAuthorityStore implements
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void deleteCA(String objectId)
+	public void removeCA(String objectId)
 			throws CertificateAuthorityException {
 		
 		verify();

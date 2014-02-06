@@ -18,8 +18,8 @@ import javax.ws.rs.core.UriInfo;
 
 import com.mdm.api.OperationFailedException;
 import com.mdm.api.RegisterParentRequestData;
+import com.mdm.api.EnrollmentManager;
 import com.mdm.cert.CertificateAuthorityException;
-import com.mdm.cert.scep.EnrollmentManager;
 
 /** Handler for:
  * - POST:   /register
@@ -75,10 +75,8 @@ public class RegistrationHandler {
 	public String unregisterParentDevice(@PathParam("parentId") String parentId) {
 		// TODO: Check SSL authentication credentials
 		try {
-			if (enrollManager.unregisterParentDevice(parentId)) {
-				return new String();
-			}
-		} catch (CertificateAuthorityException e) {
+			enrollManager.unregisterParentDevice(parentId);
+		} catch (OperationFailedException e) {
 			return String.format("Cannot unregister parent=%1$s", parentId);
 		}
 		throw new BadRequestException("Invalid parent=" + parentId);

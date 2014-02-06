@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.mdm.cert.ICertificateAuthorityStore;
-import com.mdm.cert.scep.EnrollmentManager;
+import com.mdm.api.EnrollmentManager;
 import com.mdm.utils.MdmServiceKey;
 import com.mdm.utils.MdmServiceProperties;
 

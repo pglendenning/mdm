@@ -27,7 +27,7 @@ public interface ICertificateAuthorityStore {
 	 * @throws	GeneralSecurityException if a certificate error occurs
 	 * @throws	IOException if the key store cannot be accessed
 	 */
-	public CertificateAuthority createCA(X509Certificate caCert, IssuerAndSerialNumber caIasn, 
+	public CertificateAuthority addCA(X509Certificate caCert, IssuerAndSerialNumber caIasn, 
 											 X509Certificate raCert, PrivateKey raKey,
 											 long nextSerialNumber, boolean enabledState, String caObjectId) 
 			throws CertificateAuthorityException, GeneralSecurityException, IOException;
@@ -38,7 +38,7 @@ public interface ICertificateAuthorityStore {
 	 * @param	caObjectId	The object id of the certificate authority.
 	 * @throws	CertificateAuthorityException if the state of the authority is corrupted
 	 */
-	public void deleteCA(String caObjectId)
+	public void removeCA(String caObjectId)
 			throws CertificateAuthorityException;
 	
 	/**

@@ -1,31 +1,36 @@
 package com.mdm.api;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
 import javax.crypto.Mac;
 
+import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.mdm.auth.PasscodeGenerator;
 import com.mdm.auth.TimecodeSigner;
-import com.mdm.scep.IRootCertificateAuthorityStore;
-import com.mdm.scep.RootCertificateAuthority;
-import com.mdm.scep.RootCertificateAuthorityException;
-import com.mdm.scep.RootCertificateAuthorityManager;
+import com.mdm.cert.ICertificateAuthorityStore;
+import com.mdm.cert.CertificateAuthority;
+import com.mdm.cert.CertificateAuthorityException;
 import com.mdm.utils.MdmServiceKey;
 import com.mdm.utils.MdmServiceProperties;
 import com.mdm.utils.RSAKeyPair;
@@ -33,30 +38,34 @@ import com.mdm.utils.X509CertificateGenerator;
 
 public class EnrollmentManager {
 	private static final Logger LOG = LoggerFactory.getLogger(EnrollmentManager.class);
-    private Map<String, EnrollmentHolder> HOLDERS = null;
+	// CRL basename for the CA itself
+	private static final String crlCA = "crl1.lst";
+	// CRL basename for all issued certificates
+	private static final String crlIssued = "crl2.lst";
+
+	private Map<String, EnrollmentHolder> HOLDERS = null;
     private LinkedList<EnrollmentHolder>  HOLDERS_LRU = null;
     
 	// Injected from mdmservice.xml property
-	private RootCertificateAuthorityManager certManager;
+	private ICertificateAuthorityStore store;
 	// Obtained from mdmservice.xml property
 	private String crlFormat;
-	/** 
-	 * Default validity window (in seconds) for the timecode. The timecode is
-	 * valid for the current time +/- VALIDITY_PERIOD.
-	 */
+	// RA SubjectDN/IssuerDN format
+	private String raSubjectDNFormat;
+	// Default validity window (in seconds) for the timecode. The timecode is
+	// valid for the current time +/- VALIDITY_PERIOD.
 	private int VALIDITY_PERIOD = 20;
-	
-	/** Default time code update interval period in seconds. */
+	// Default time code update interval period in seconds. 
 	private int INTERVAL_PERIOD = 60;
-
 	
 	/**
 	 * Constructor.
 	 * @param	store	The CA store.
 	 */
-	public EnrollmentManager(IRootCertificateAuthorityStore store) {
-		certManager = new RootCertificateAuthorityManager(store);
+	public EnrollmentManager(ICertificateAuthorityStore store) {
+		this.store = store;
 		crlFormat = MdmServiceProperties.getProperty(MdmServiceKey.crlUrlFormatString);
+		raSubjectDNFormat = MdmServiceProperties.getProperty(MdmServiceKey.raX500NameFormatString);
     	HOLDERS = new HashMap<String, EnrollmentHolder>();
 		HOLDERS_LRU = new LinkedList<EnrollmentHolder>();
 	}
@@ -65,9 +74,10 @@ public class EnrollmentManager {
 	 * Constructor.
 	 * @param	store	The CA store.
 	 */
-	public EnrollmentManager(IRootCertificateAuthorityStore store, int intervalPeriod, int validityPeriod) {
-		certManager = new RootCertificateAuthorityManager(store);
+	public EnrollmentManager(ICertificateAuthorityStore store, int intervalPeriod, int validityPeriod) {
+		this.store = store;
 		crlFormat = MdmServiceProperties.getProperty(MdmServiceKey.crlUrlFormatString);
+		raSubjectDNFormat = MdmServiceProperties.getProperty(MdmServiceKey.raX500NameFormatString);
     	HOLDERS = new HashMap<String, EnrollmentHolder>();
 		HOLDERS_LRU = new LinkedList<EnrollmentHolder>();
     	INTERVAL_PERIOD = intervalPeriod;
@@ -97,33 +107,49 @@ public class EnrollmentManager {
 	 * Register a parent device.
 	 * @param	data	Registration data.
 	 * @return	A PKCS12 container encoded as byte array.
-	 * @throws RootCertificateAuthorityException 
+	 * @throws CertificateAuthorityException 
 	 */
 	public byte[] registerParentDevice(RegisterParentRequestData data) throws OperationFailedException {
 		// Should have checked in caller
 		if (data.isComplete())
 			return null;
 		
-		// TODO: check with parse.com that the user id is valid
-		
 		// Create a new parent identifier
 		boolean objExists = false;
 		String objectId = null;
-		do {
-			objectId = ObjectIdentifier.getInstance();
-			
-			// TODO: query data-store to see if object exists
-			
-		} while (objExists);
+		try {
+			do {
+				objectId = ObjectIdentifier.getInstance();
+				CertificateAuthority ca = store.getCA(objectId);
+				objExists = ca != null;				
+			} while (objExists);
+		} catch (Exception e) {
+			objExists = false;
+		}
 
+		// Create a root V3 certificate for CA and RA
 		String issuerDN = String.format("CN=%1$s, L=%2$s, ST=%3$s, C=%4$s, O=%5$s, OU=MDM Authority",
 							data.getFriendlyName(), data.getCity(), data.getState(),
 							data.getCountry(), objectId);
-		String crlBaseUrl = String.format(crlFormat, objectId);
-		
-		// Create a root V3 certificate for CA and RA
+		String crlBaseURL = String.format(crlFormat, objectId);
+		String raSubjectDN = String.format("C=US,L=Woodside,ST=California,O=%1$s,OU=RA,CN=mdm.mdm4all.com",
+							data.getFriendlyName());
+		//raSubjectDN = String.format(raSubjectDNFormat, O);
+		// Create CRL links
+		StringBuffer x = new StringBuffer();
+		x.append(crlBaseURL);
+		x.append(crlCA);
+		x.append(",");
+		x.append(crlBaseURL);
+		x.append(crlIssued);
+		String crl = x.toString();
+				
 		X509Certificate caCert;
 		RSAKeyPair caKeys = new RSAKeyPair();
+		X509Certificate raCert;
+		RSAKeyPair raKeys = new RSAKeyPair();
+		X509CertificateHolder holder;
+		IssuerAndSerialNumber caIasn;		
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
 		try {
 			Certificate[] chain = new Certificate[1];
@@ -135,15 +161,27 @@ public class EnrollmentManager {
 			// Create PKCS12 container
 			chain[0] = caCert;		
 			X509CertificateGenerator.savePKCS12(os, data.getFriendlyName(), data.getUserId(), caKeys.getPrivateKey(), chain);
+					
+			holder = new X509CertificateHolder(caCert.getEncoded());
+			caIasn = new IssuerAndSerialNumber(holder.getIssuer(), holder.getSerialNumber());
+			
+			// Create the RA certificate and key - serial number == 2
+			raKeys.generate();
+			raCert = X509CertificateGenerator.createCert(
+					raKeys.getPublicKey(),
+	        		caCert, caKeys.getPrivateKey(),
+	        		2, caCert.getNotAfter(),
+	        		raSubjectDN,
+	        		crl, null);
 			
 			// Finally update data store
-			certManager.createCA(caCert, caKeys.getPrivateKey(), crlBaseUrl, objectId);
-						
+			CertificateAuthority ca = store.addCA(caCert, caIasn, raCert, raKeys.getPrivateKey(), 10, true, objectId);
+			// TODO: Add ca to LRU cache
+			
 		} catch (Exception e) {
 			LOG.info("Failed registerParentDevice({}) with id({}) - {}.({})", issuerDN, objectId, e.getClass().toString(), e.getMessage());
 			throw new OperationFailedException();
-		}
-		
+		}		
 		return os.toByteArray();
 	}
 	
@@ -151,14 +189,16 @@ public class EnrollmentManager {
 	 * Unregister the parent device with id equal to objectId
 	 * @param	objectId	The parents object identifier.
 	 * @return	True if the registration removal was successful.
-	 * @throws RootCertificateAuthorityException 
+	 * @throws OperationFailedException 
 	 */
-	public synchronized boolean unregisterParentDevice(String objectId) throws RootCertificateAuthorityException {
-		// TODO: find parent from objectId
-		RootCertificateAuthority ca = certManager.getCA(objectId);
-		if (ca == null) return false;
-		certManager.deleteCA(ca);
-		return true;
+	public synchronized void unregisterParentDevice(String objectId) throws OperationFailedException {
+		
+		try {
+			store.removeCA(objectId);
+		} catch (CertificateAuthorityException e) {
+			LOG.info("Failed unregisterParentDevice(id={}) - {}", objectId, e.getMessage());
+			throw new OperationFailedException();
+		}
 	}
 	
 	/**
@@ -173,39 +213,44 @@ public class EnrollmentManager {
 		return new TimecodeSigner(objectId);
 	}
 	
+	@SuppressWarnings("unused")
 	public EnrollmentHolder startNewEnrollment(String parentId, String friendlyName) throws OperationFailedException, InvalidObjectIdException {
 		// Create a new child identifier
 		boolean objExists = false;
 		String objectId = null;
 		
-		if (!isValidParentId(parentId)) {
+		String enrollURL = String.format(MdmServiceProperties.getProperty(MdmServiceKey.enrollUrlFormatString), objectId);
+		CertificateAuthority ca = null;
+		try {
+			store.getCA(parentId);
+		} catch (CertificateAuthorityException|GeneralSecurityException|IOException e) {
 			throw new InvalidObjectIdException();
 		}
-		
-		long serialNum1 = certManager.getNextSerialNumber();
-		long serialNum2 = certManager.getNextSerialNumber();
-		
+
+		if (ca == null) {
+			LOG.warn("Failed startNewEnrollment(parentId={}, name={}) - CertificateAuthority == null", parentId, friendlyName);
+			throw new OperationFailedException();
+		}
+				
 		do {
 			objectId = ObjectIdentifier.getInstance();
 			
 			// TODO: query data-store to see if object exists
-			objExists = null != certManager.getCA(objectId) || null != certManager.getIssued(objectId);
+			//objExists = null != store.getCA(objectId) || null != certManager.getIssued(objectId);
 			
 		} while (objExists);
 		
-		String enrollURL = String.format(MdmServiceProperties.getProperty(MdmServiceKey.enrollUrlFormatString), objectId);
+		long serialNum1 = 0;
+		long serialNum2 = 0;
 		EnrollmentHolder holder = null;
-		RootCertificateAuthority ca = certManager.getCA(parentId);
-		if (ca == null) {
-			LOG.warn("Failed startNewEnrollment(parentId={}, name={}) - RootCertificateAuthority == null", parentId, friendlyName);
-			throw new OperationFailedException();
-		}
-		
 		try {
+			serialNum1 = ca.getNextSerialNumber();
+			serialNum2 = ca.getNextSerialNumber();
+			
 			PasscodeGenerator gen = new PasscodeGenerator(getTimecodeSigner(parentId), -1, INTERVAL_PERIOD, VALIDITY_PERIOD);
 			holder = new EnrollmentHolder(parentId, ca, objectId, serialNum1, serialNum2, enrollURL, gen);
-		} catch(NoSuchAlgorithmException | InvalidKeyException | UnsupportedEncodingException e) {
-			LOG.warn("Failed startNewEnrollment(parentId={}, name={}) - NoSuchAlgorithmException.({})", parentId, friendlyName, e.getMessage());
+		} catch(CertificateAuthorityException | NoSuchAlgorithmException | InvalidKeyException | UnsupportedEncodingException e) {
+			LOG.warn("Failed startNewEnrollment(parentId={}, name={}) - {}", parentId, friendlyName, e.getMessage());
 			throw new OperationFailedException();
 		}
 		// TODO: need a better persistence model that scales
@@ -280,9 +325,9 @@ public class EnrollmentManager {
 	
 	public synchronized boolean isValidParentId(String parentId) {
 		try {
-			certManager.getCA(parentId);
+			store.getCA(parentId);
 			return true;
-		} catch (RootCertificateAuthorityException e) {
+		} catch (CertificateAuthorityException|GeneralSecurityException|IOException e) {
 		}
 		return false;
 	}
