@@ -371,15 +371,85 @@ public class AwsCertificateAuthorityStoreTest {
 	/**
 	 * Test method for {@link com.mdm.cert.AwsCertificateAuthorityStore#deleteIssued(java.lang.String)}.
 	 */
+	@Test
 	public void testDeleteIssued() {
-		fail("Not yet implemented");
+		objectId = Long.toString(Calendar.getInstance().getTimeInMillis(), 32) + "C";
+		testAddCA();
+		testAddIssued();
+		AwsCertificateAuthorityStore store = new AwsCertificateAuthorityStore();
+		CertificateAuthority ca = null;
+		IssuedCertificateResult result = null;
+		try {
+			CertificateAuthority _ca = store.getCA(objectId);
+			ca = _ca;
+		} catch (Exception e) {
+			fail("Exception: " + e.getMessage());
+		}
+		assertTrue(ca != null);
+		try {
+			store.deleteIssued(objectId + "C1");
+		} catch (Exception e) {
+			fail("Exception:" + e.getMessage());
+		}
+		try {
+			IssuedCertificateResult r1 = store.getDeviceIssued(objectId + "C1");
+			result = r1;
+		} catch (Exception e) {
+			result = null;
+		}
+		assertTrue(result == null);
+		try {
+			IssuedCertificateResult r1 = store.getDeviceIssued(objectId + "C2");
+			result = r1;
+		} catch (Exception e) {
+			result = null;
+		}
+		assertFalse(result == null);
+		assertTrue(result.getCa().getCaCertificate().equals(caCert));
+		assertTrue(result.getIssuedCertificate().equals(issuedCert2));
+		testRemoveCA();
 	}
 
 	/**
 	 * Test method for {@link com.mdm.cert.AwsCertificateAuthorityStore#setAppIssued(java.security.cert.X509Certificate, java.lang.String)}.
 	 */
+	@Test
 	public void testSetAppIssued() {
-		fail("Not yet implemented");
+		objectId = Long.toString(Calendar.getInstance().getTimeInMillis(), 32) + "D";
+		testAddCA();
+		testAddIssued();
+		AwsCertificateAuthorityStore store = new AwsCertificateAuthorityStore();
+		CertificateAuthority ca = null;
+		IssuedCertificateResult result = null;
+		try {
+			CertificateAuthority _ca = store.getCA(objectId);
+			ca = _ca;
+		} catch (Exception e) {
+			fail("Exception: " + e.getMessage());
+		}
+		assertTrue(ca != null);
+		try {
+			store.setAppIssued(raCert, objectId + "D1");
+		} catch (Exception e) {
+			fail("Exception:" + e.getMessage());
+		}
+		try {
+			IssuedCertificateResult r1 = store.getAppIssued(objectId + "C1");
+			result = r1;
+		} catch (Exception e) {
+			result = null;
+		}
+		assertTrue(result == null);
+		try {
+			IssuedCertificateResult r1 = store.getDeviceIssued(objectId + "C2");
+			result = r1;
+		} catch (Exception e) {
+			result = null;
+		}
+		assertFalse(result == null);
+		assertTrue(result.getCa().getCaCertificate().equals(caCert));
+		assertTrue(result.getIssuedCertificate().equals(issuedCert2));
+		testRemoveCA();
 	}
 
 	/**

@@ -10,11 +10,11 @@ import static org.junit.Assert.fail;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import com.mdm.cert.X509CertificateGenerator;
 import com.mdm.cert.scep.MdmScepServlet;
 import com.mdm.session.UrlRewriteFilter;
 import com.mdm.session.UrlRewriteRequestWrapper;
 import com.mdm.session.UrlRewriteResponseWrapper;
-import com.mdm.utils.X509CertificateGenerator;
 
 import java.math.BigInteger;
 import java.security.KeyFactory;

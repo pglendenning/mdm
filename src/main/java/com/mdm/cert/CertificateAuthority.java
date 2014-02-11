@@ -6,10 +6,6 @@ import java.security.PrivateKey;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.Date;
-import java.util.List;
-
-import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
-import org.bouncycastle.cert.X509CertificateHolder;
 
 /**
  * The RootCertificateAutority is used by SCEP to manage certificates associated with
@@ -31,7 +27,7 @@ public class CertificateAuthority {
 	}
 	
 	/**
-	 * Certificate store accessor.
+	 * Certificate store getter.
 	 * @return	The certificate store.
 	 */
 	ICertificateAuthorityStore getStoreInstance() {
@@ -51,7 +47,7 @@ public class CertificateAuthority {
 	/**
 	 * @return	The object id. 
 	 */
-	String getObjectId() {
+	public String getObjectId() {
 		return connector.getObjectId();
 	}
 
@@ -110,9 +106,7 @@ public class CertificateAuthority {
 	public void addIssued(String objectId, X509Certificate cert,
 							IssuedCertificateIdentifier issuedCertId)
 			throws CertificateAuthorityException, GeneralSecurityException, IOException {
-		X509CertificateHolder holder = new X509CertificateHolder(cert.getEncoded());
-		IssuerAndSerialNumber iasn = new IssuerAndSerialNumber(holder.getIssuer(), holder.getSerialNumber());
-		connector.getStoreInstance().addIssued(cert, iasn, issuedCertId, objectId, connector.getObjectId());
+		connector.getStoreInstance().addIssued(cert, issuedCertId, objectId, connector.getObjectId());
 	}
 	
 	/**

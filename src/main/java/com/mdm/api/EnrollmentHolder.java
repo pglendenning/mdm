@@ -388,7 +388,7 @@ public class EnrollmentHolder {
 		}
 		
 		// Cancel enrollment if status update nor requested frequently
-		if (otp.intervalsPassed > maxIntervalsBetweenStatusUpdate) {
+		if (otp.getIntervalsPassed() > maxIntervalsBetweenStatusUpdate) {
 			cancel();
 			return new EnrollStatusResponseData(isEnrolled(), EnrollStatusResponseData.DO_CANCEL, otpGenerator.getZeroCode(), 0);
 		}
@@ -396,6 +396,6 @@ public class EnrollmentHolder {
 		int action = EnrollStatusResponseData.DO_NOTHING;	// do nothing/otp update
 		if (isWaitingCSR())
 			action = EnrollStatusResponseData.DO_CSR;		// fulfill CSR
-		return new EnrollStatusResponseData(isEnrolled(), action, otp.passcode, otp.nextUpdate);
+		return new EnrollStatusResponseData(isEnrolled(), action, otp.getPasscode(), otp.getNextUpdate());
 	}
 }

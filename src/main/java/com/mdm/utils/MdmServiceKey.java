@@ -11,8 +11,8 @@ public final class MdmServiceKey {
 	public static final String awsSimpleDbRootCertificateAuthorityDomain = "AWSSimpleDbRootCertificateAuthorityDomain";
 	public static final String awsS3RootCertificateAuthorityBucket = "AWSS3RootCertificateAuthorityBucket";
 	public static final String pkiAccessKey = "PkiAccessKey";
-	public static final String awsSimpleDbIssuedCertificatesDomain = "AWSS3IssuedCertificatesDomain";
-	public static final String awsS3IssuedCertificatesBucket = "AWSSimpleDbIssuedCertificatesBucket";
+	public static final String awsSimpleDbIssuedCertificatesDomain = "AWSSimpleDbIssuedCertificatesDomain";
+	public static final String awsS3IssuedCertificatesBucket = "AWSS3IssuedCertificatesBucket";
 	
 	private MdmServiceKey() {
 		// TODO Auto-generated constructor stub

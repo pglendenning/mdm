@@ -3,25 +3,17 @@ package com.mdm.api;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 
-import javax.crypto.Mac;
-
-import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
-import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,11 +23,19 @@ import com.mdm.auth.TimecodeSigner;
 import com.mdm.cert.ICertificateAuthorityStore;
 import com.mdm.cert.CertificateAuthority;
 import com.mdm.cert.CertificateAuthorityException;
+import com.mdm.cert.RSAKeyPair;
+import com.mdm.cert.X509CertificateGenerator;
 import com.mdm.utils.MdmServiceKey;
 import com.mdm.utils.MdmServiceProperties;
-import com.mdm.utils.RSAKeyPair;
-import com.mdm.utils.X509CertificateGenerator;
+import com.mdm.utils.ObjectCache;
+import com.mdm.utils.ObjectIdentifier;
 
+/**
+ * 
+ * This class is thread safe.
+ * @author paul
+ *
+ */
 public class EnrollmentManager {
 	private static final Logger LOG = LoggerFactory.getLogger(EnrollmentManager.class);
 	// CRL basename for the CA itself
@@ -43,14 +43,14 @@ public class EnrollmentManager {
 	// CRL basename for all issued certificates
 	private static final String crlIssued = "crl2.lst";
 
-	private Map<String, EnrollmentHolder> HOLDERS = null;
-    private LinkedList<EnrollmentHolder>  HOLDERS_LRU = null;
+	private ObjectCache<EnrollmentHolder> HOLDERS = null;
     
 	// Injected from mdmservice.xml property
 	private ICertificateAuthorityStore store;
 	// Obtained from mdmservice.xml property
 	private String crlFormat;
 	// RA SubjectDN/IssuerDN format
+	@SuppressWarnings("unused")
 	private String raSubjectDNFormat;
 	// Default validity window (in seconds) for the timecode. The timecode is
 	// valid for the current time +/- VALIDITY_PERIOD.
@@ -66,8 +66,7 @@ public class EnrollmentManager {
 		this.store = store;
 		crlFormat = MdmServiceProperties.getProperty(MdmServiceKey.crlUrlFormatString);
 		raSubjectDNFormat = MdmServiceProperties.getProperty(MdmServiceKey.raX500NameFormatString);
-    	HOLDERS = new HashMap<String, EnrollmentHolder>();
-		HOLDERS_LRU = new LinkedList<EnrollmentHolder>();
+    	HOLDERS = new ObjectCache<EnrollmentHolder>();
 	}
 	
 	/**
@@ -78,26 +77,24 @@ public class EnrollmentManager {
 		this.store = store;
 		crlFormat = MdmServiceProperties.getProperty(MdmServiceKey.crlUrlFormatString);
 		raSubjectDNFormat = MdmServiceProperties.getProperty(MdmServiceKey.raX500NameFormatString);
-    	HOLDERS = new HashMap<String, EnrollmentHolder>();
-		HOLDERS_LRU = new LinkedList<EnrollmentHolder>();
+    	HOLDERS = new ObjectCache<EnrollmentHolder>();
     	INTERVAL_PERIOD = intervalPeriod;
     	VALIDITY_PERIOD = validityPeriod;
 	}
 	
 	/**
-	 * Extract the OU part of the subject distinguished name.
+	 * Extract the CN part of the subject distinguished name.
 	 * @return	The object id.
 	 * @throws 	InvalidObjectIdException
 	 */
 	public static String getObjectIdFromCertifcate(X509Certificate cert) throws InvalidObjectIdException {
-		// Get the X500Name and extract the OU part
 		X500Name name;
 		try {
 			name = new JcaX509CertificateHolder(cert).getIssuer();			
 		} catch (Exception e) {
 			throw new InvalidObjectIdException();
 		}
-		RDN[] org = name.getRDNs(BCStyle.O);
+		RDN[] org = name.getRDNs(BCStyle.CN);
 		if (org.length == 0)
 			throw new InvalidObjectIdException();
 		return IETFUtils.valueToString(org[0].getFirst().getValue());
@@ -117,24 +114,42 @@ public class EnrollmentManager {
 		// Create a new parent identifier
 		boolean objExists = false;
 		String objectId = null;
+		CertificateAuthority ca = null;
 		try {
 			do {
 				objectId = ObjectIdentifier.getInstance();
-				CertificateAuthority ca = store.getCA(objectId);
-				objExists = ca != null;				
+				synchronized(store) {
+					ca = store.getCA(objectId);
+					objExists = ca != null;	
+				}
 			} while (objExists);
 		} catch (Exception e) {
 			objExists = false;
 		}
 
 		// Create a root V3 certificate for CA and RA
+		
+		// FIXME: Have no way to return objectId.
+		/*
+		// Create a unique common name but don't expose object key. This
+		// ensures the issuer name is unique.
+		String cn = null;
+		try {
+			Mac mac = Mac.getInstance("HmacMD5");
+			mac.init(new SecretKeySpec(objectId.getBytes("UTF-8"), "HmacMD5"));
+			cn = new BigInteger(mac.doFinal(data.getFriendlyName().getBytes())).toString(32);
+		} catch (Exception e) {
+			throw new OperationFailedException(e);
+		}
+		*/
+		
 		String issuerDN = String.format("CN=%1$s, L=%2$s, ST=%3$s, C=%4$s, O=%5$s, OU=MDM Authority",
-							data.getFriendlyName(), data.getCity(), data.getState(),
-							data.getCountry(), objectId);
+							objectId, data.getCity(), data.getState(),
+							data.getCountry(), data.getFriendlyName());
 		String crlBaseURL = String.format(crlFormat, objectId);
 		String raSubjectDN = String.format("C=US,L=Woodside,ST=California,O=%1$s,OU=RA,CN=mdm.mdm4all.com",
 							data.getFriendlyName());
-		//raSubjectDN = String.format(raSubjectDNFormat, O);
+		// raSubjectDN = String.format(raSubjectDNFormat, O);
 		// Create CRL links
 		StringBuffer x = new StringBuffer();
 		x.append(crlBaseURL);
@@ -148,8 +163,6 @@ public class EnrollmentManager {
 		RSAKeyPair caKeys = new RSAKeyPair();
 		X509Certificate raCert;
 		RSAKeyPair raKeys = new RSAKeyPair();
-		X509CertificateHolder holder;
-		IssuerAndSerialNumber caIasn;		
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
 		try {
 			Certificate[] chain = new Certificate[1];
@@ -162,9 +175,6 @@ public class EnrollmentManager {
 			chain[0] = caCert;		
 			X509CertificateGenerator.savePKCS12(os, data.getFriendlyName(), data.getUserId(), caKeys.getPrivateKey(), chain);
 					
-			holder = new X509CertificateHolder(caCert.getEncoded());
-			caIasn = new IssuerAndSerialNumber(holder.getIssuer(), holder.getSerialNumber());
-			
 			// Create the RA certificate and key - serial number == 2
 			raKeys.generate();
 			raCert = X509CertificateGenerator.createCert(
@@ -175,7 +185,9 @@ public class EnrollmentManager {
 	        		crl, null);
 			
 			// Finally update data store
-			CertificateAuthority ca = store.addCA(caCert, caIasn, raCert, raKeys.getPrivateKey(), 10, true, objectId);
+			synchronized(store) {
+				ca = store.addCA(caCert, raCert, raKeys.getPrivateKey(), 10, true, objectId);
+			}
 			// TODO: Add ca to LRU cache
 			
 		} catch (Exception e) {
@@ -191,10 +203,12 @@ public class EnrollmentManager {
 	 * @return	True if the registration removal was successful.
 	 * @throws OperationFailedException 
 	 */
-	public synchronized void unregisterParentDevice(String objectId) throws OperationFailedException {
+	public void unregisterParentDevice(String objectId) throws OperationFailedException {
 		
 		try {
-			store.removeCA(objectId);
+			synchronized(store) {
+				store.removeCA(objectId);
+			}
 		} catch (CertificateAuthorityException e) {
 			LOG.info("Failed unregisterParentDevice(id={}) - {}", objectId, e.getMessage());
 			throw new OperationFailedException();
@@ -209,11 +223,10 @@ public class EnrollmentManager {
 	 * @throws UnsupportedEncodingException 
 	 * @throws InvalidKeyException 
 	 */
-	public synchronized TimecodeSigner getTimecodeSigner(String objectId) throws NoSuchAlgorithmException, InvalidKeyException, UnsupportedEncodingException {
+	public TimecodeSigner getTimecodeSigner(String objectId) throws NoSuchAlgorithmException, InvalidKeyException, UnsupportedEncodingException {
 		return new TimecodeSigner(objectId);
 	}
 	
-	@SuppressWarnings("unused")
 	public EnrollmentHolder startNewEnrollment(String parentId, String friendlyName) throws OperationFailedException, InvalidObjectIdException {
 		// Create a new child identifier
 		boolean objExists = false;
@@ -222,7 +235,9 @@ public class EnrollmentManager {
 		String enrollURL = String.format(MdmServiceProperties.getProperty(MdmServiceKey.enrollUrlFormatString), objectId);
 		CertificateAuthority ca = null;
 		try {
-			store.getCA(parentId);
+			synchronized(store) {
+				ca = store.getCA(parentId);
+			}
 		} catch (CertificateAuthorityException|GeneralSecurityException|IOException e) {
 			throw new InvalidObjectIdException();
 		}
@@ -254,10 +269,8 @@ public class EnrollmentManager {
 			throw new OperationFailedException();
 		}
 		// TODO: need a better persistence model that scales
-		synchronized(this) {
-			HOLDERS.put(objectId, holder);
-			HOLDERS_LRU.addLast(holder);
-		}
+		// ObjectCache is thread safe
+		HOLDERS.putObject(objectId, holder);
 		return holder;
 	}
 	
@@ -265,67 +278,45 @@ public class EnrollmentManager {
 	 * Call this from a worker thread at regular intervals.
 	 */
 	public void cleanUpEnrollments(boolean lowCPU) {
-		// Don't keep lock while traversing list
-		LinkedList<EnrollmentHolder> holdersToCheck = null;
-		synchronized(this) {
-			if (HOLDERS_LRU.isEmpty())
-				return;
-			holdersToCheck = HOLDERS_LRU;
-			HOLDERS_LRU = new LinkedList<EnrollmentHolder>();
-		}
+		// ObjectCache is thread safe
+		ObjectCache<EnrollmentHolder> holdersToCheck = new ObjectCache<EnrollmentHolder>();
+		holdersToCheck.transferCache(HOLDERS);
 		
-		// Split into two lists
 		LinkedList<EnrollmentHolder> holdersToReturn = new LinkedList<EnrollmentHolder>();
-		LinkedList<EnrollmentHolder> holdersToRemove = new LinkedList<EnrollmentHolder>();
 		while (!holdersToCheck.isEmpty()) {
-			EnrollmentHolder holder = holdersToCheck.removeFirst();
+			EnrollmentHolder holder = holdersToCheck.removeLRU();
 			// Reclaim after 2 mins
-			if ((holder.isCancelled() || holder.isEnrolled()) && holder.getTimeSinceCompleted() > 120) {
-				holdersToRemove.addLast(holder);				
-			} else {
-				holdersToReturn.addLast(holder);
+			if (!(holder.isCancelled() || holder.isEnrolled()) || holder.getTimeSinceCompleted() <= 120) {
+				holdersToReturn.addFirst(holder);
 			}
 			
 		}
 		
-		// Remove holders		
-		while (!holdersToRemove.isEmpty()) {
-			// Sleep for 1 sec every 10 removals if requiring lowCPU
-			int i = lowCPU? Integer.MAX_VALUE: 10;
-			synchronized(this) {
-				while (!holdersToRemove.isEmpty() && i-- > 0) {
-					EnrollmentHolder holder = holdersToRemove.removeFirst();
-					HOLDERS.remove(holder.getEnrollId());
+		// Return holders - acquire lock outside loop
+		do {
+			int i = (lowCPU)? 100: Integer.MAX_VALUE;
+			synchronized(HOLDERS) {
+				while (!holdersToReturn.isEmpty() && --i != 0) {
+					EnrollmentHolder holder = holdersToReturn.removeFirst();
+					HOLDERS.putObjectLRU(holder.getEnrollId(), holder);
 				}
 			}
-			
 			if (i == 0) {
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					holdersToRemove.addAll(holdersToReturn);
-					holdersToReturn = holdersToRemove;
-					break;
-				}
+				// Sleep
 			}
-		}
-		
-		// Swap holdersToReturn with HOLDERS_LRU
-		if (holdersToReturn.isEmpty())
-			return;	
-		synchronized(this) {
-			holdersToReturn.addAll(HOLDERS_LRU);
-			HOLDERS_LRU = holdersToReturn;
-		}
+		} while (!holdersToReturn.isEmpty());
 	}
 	
-	public synchronized EnrollmentHolder getEnrollment(String enrollId) {
-		return HOLDERS.get(enrollId);
+	public EnrollmentHolder getEnrollment(String enrollId) {
+		// ObjectCache is thread safe
+		return HOLDERS.getObject(enrollId);
 	}
 	
-	public synchronized boolean isValidParentId(String parentId) {
+	public boolean isValidParentId(String parentId) {
 		try {
-			store.getCA(parentId);
+			synchronized(store) {
+				store.getCA(parentId);
+			}
 			return true;
 		} catch (CertificateAuthorityException|GeneralSecurityException|IOException e) {
 		}

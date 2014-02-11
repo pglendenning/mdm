@@ -1,6 +1,5 @@
 package com.mdm.cert;
 
-import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 
 /**
@@ -26,7 +25,7 @@ public class IssuedCertificateResult {
 	 * Get the CA. This should not be NULL.
 	 * @return
 	 */
-	CertificateAuthority getCa() {
+	public CertificateAuthority getCa() {
 		return rootCA;
 	}
 	
@@ -34,7 +33,7 @@ public class IssuedCertificateResult {
 	 * Get the object id.
 	 * @return
 	 */
-	String getObjectId() {
+	public String getObjectId() {
 		return objectId;
 	}
 	
@@ -42,7 +41,7 @@ public class IssuedCertificateResult {
 	 * Get the issued certificate. Maybe null.
 	 * @return
 	 */
-	X509Certificate getIssuedCertificate() {
+	public X509Certificate getIssuedCertificate() {
 		return issuedCert;
 	}
 	

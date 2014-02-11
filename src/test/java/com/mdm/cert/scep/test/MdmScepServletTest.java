@@ -43,10 +43,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mdm.cert.RSAKeyPair;
+import com.mdm.cert.X509CertificateGenerator;
 import com.mdm.cert.scep.MdmScepServlet;
 import com.mdm.utils.MdmServiceProperties;
-import com.mdm.utils.RSAKeyPair;
-import com.mdm.utils.X509CertificateGenerator;
 
 
 public class MdmScepServletTest implements CallbackHandler {

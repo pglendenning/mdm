@@ -38,7 +38,6 @@ import com.mdm.auth.AwsMdmPropertiesCredentialsProvider;
 import com.mdm.auth.PasscodeGenerator;
 import com.mdm.utils.MdmServiceKey;
 import com.mdm.utils.MdmServiceProperties;
-import com.mdm.utils.X509CertificateGenerator;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
@@ -74,7 +73,6 @@ public class AwsCertificateAuthorityStore implements
 	private String domainCA;		// Simple DB domain for CA
 	private String bucketIssued;	// s3 bucket for issued cert's
 	private String domainIssued;	// Simple DB domain for issued cert's
-	private String passcode;		
 	private PasscodeGenerator auth;
 	private Region region;
 	
@@ -106,7 +104,7 @@ public class AwsCertificateAuthorityStore implements
 	}
 
 	private void verify() throws CertificateAuthorityException {
-		if (domainCA == null || bucketCA == null || auth == null || passcode == null) {
+		if (domainCA == null || bucketCA == null || auth == null) {
 			throw new CertificateAuthorityException();
 		}
 	}
@@ -115,18 +113,24 @@ public class AwsCertificateAuthorityStore implements
 	 * {@inheritDoc}
 	 */
 	@Override
-	public CertificateAuthority addCA(X509Certificate caCert, IssuerAndSerialNumber caIasn, 
+	public CertificateAuthority addCA(X509Certificate caCert,
 			X509Certificate raCert, PrivateKey raKey, long nextSerialNumber,
 			boolean enabledState, String objectId) 
 			throws CertificateAuthorityException,
 			GeneralSecurityException, IOException {
 
 		verify();
+		IssuerAndSerialNumberHolder iasn = new IssuerAndSerialNumberHolder(caCert);
+		if (!iasn.isValid()) {
+			LOG.info("CreateCA(objectId={}) bad IASN", objectId);
+			throw new CertificateAuthorityException();
+		}
+		
 		String blobKey = objectId+"/auth";
 		// Add RA cert's to a PKCS12 container and password protect.		
 		ByteArrayInputStream fin;
 		// FIXME: should specify the character set
-		passcode = auth.generateResponseCode(objectId.getBytes());
+		String passcode = auth.generateResponseCode(objectId.getBytes());
 		ByteArrayOutputStream fOut = new ByteArrayOutputStream();
 		Certificate[] chain = new Certificate[2];
 		chain[0] = raCert;
@@ -139,6 +143,7 @@ public class AwsCertificateAuthorityStore implements
 			metadata.setCacheControl("no-cache");
 			metadata.setContentDisposition(objectId + ".p12");
 			metadata.setContentType("application/x-pkcs12");
+			metadata.setContentLength(fin.available());
 	        s3.putObject(new PutObjectRequest(bucketCA, blobKey, fin, metadata));
 		} catch (AmazonClientException e) {
 			LOG.info("CreateCA(objectId={}) AWS s3 exception(1) - {}", objectId, e.getMessage());
@@ -153,7 +158,7 @@ public class AwsCertificateAuthorityStore implements
 			String notBefore = formatter.format(caCert.getNotBefore());
 
 			List<ReplaceableAttribute> item = new ArrayList<ReplaceableAttribute>();
-	        item.add(new ReplaceableAttribute("IASN", caIasn.toString(), true));
+	        item.add(new ReplaceableAttribute("IASN", iasn.toString(), true));
 	        item.add(new ReplaceableAttribute("SerialCounter", new Long(nextSerialNumber).toString(), true));
 	        item.add(new ReplaceableAttribute("Enabled", new Boolean(enabledState).toString(), true));
 	        item.add(new ReplaceableAttribute("CertNotAfter", notAfter, true));
@@ -184,8 +189,9 @@ public class AwsCertificateAuthorityStore implements
 		
 		verify();
 		LOG.debug("DeleteCA(objectId={}) initiated", objectId);
-		String selectExpression = "select * from `" + domainIssued + "` where ParentId = '" + objectId + "'";
-		SelectRequest selectRequest = new SelectRequest(selectExpression);
+		String selectExpression = "select itemName() from `" + domainIssued + "` where ParentId = '" + objectId + "'";
+		SelectRequest selectRequest = new SelectRequest(selectExpression)
+							.withConsistentRead(true);
 		try {
 			// Get children
 			List<String> childIds = new LinkedList<String>();
@@ -194,6 +200,7 @@ public class AwsCertificateAuthorityStore implements
             }
             
             // Delete children
+            // TODO: batch the delete operation
             for (String id : childIds) {
     			s3.deleteObject(bucketIssued, id+"/auth/device");
     			s3.deleteObject(bucketIssued, id+"/auth/app");
@@ -220,15 +227,17 @@ public class AwsCertificateAuthorityStore implements
 		String selectExpression;
 		List<Item> items;
 		verify();
-		selectExpression = "select * from `" + domainCA + "` where IASN = '" + iasn.toString() + "'";
-		SelectRequest selectRequest = new SelectRequest(selectExpression);
+		selectExpression = "select itemName() from `" + domainCA + "` where IASN = '" 
+				+ new IssuerAndSerialNumberHolder(iasn).toString() + "'";
+		SelectRequest selectRequest = new SelectRequest(selectExpression)
+						.withConsistentRead(true);
 		try {
 			items = sdb.select(selectRequest).getItems();
 			if (items.size() == 1) {
 				Item item = items.get(0);
 				String objectId = item.getName();
 		        KeyStore store = KeyStore.getInstance("PKCS12", BC);
-				passcode = auth.generateResponseCode(objectId.getBytes());
+				String passcode = auth.generateResponseCode(objectId.getBytes());
 				
 	            S3Object object = s3.getObject(new GetObjectRequest(bucketCA, objectId+"/auth"));		    	
 		        store.load(object.getObjectContent(), passcode.toCharArray());
@@ -269,7 +278,7 @@ public class AwsCertificateAuthorityStore implements
 		
 		try {
 	        KeyStore store = KeyStore.getInstance("PKCS12", BC);
-			passcode = auth.generateResponseCode(objectId.getBytes());
+			String passcode = auth.generateResponseCode(objectId.getBytes());
 	    	
 			S3Object object = s3.getObject(new GetObjectRequest(bucketCA, objectId+"/auth"));			
 	        store.load(object.getObjectContent(), passcode.toCharArray());
@@ -303,19 +312,21 @@ public class AwsCertificateAuthorityStore implements
 	public long getNextSerialNumber(String objectId) throws CertificateAuthorityException {
 		verify();
 		try {
-			
-			GetAttributesResult result = sdb.getAttributes(new GetAttributesRequest(domainCA, objectId));
+			GetAttributesResult result = sdb.getAttributes(
+					new GetAttributesRequest(domainCA, objectId)
+					.withAttributeNames("SerialCounter")
+					.withConsistentRead(true));
 			
 			String prevcount = null;
             for (Attribute attribute : result.getAttributes()) {
-            	if (attribute.getName() == "SerialCounter") {
+            	if (attribute.getName().equals("SerialCounter")) {
             		prevcount = attribute.getValue();
             		break;
             	}
             }
             
             if (prevcount == null) {
-	        	LOG.error("GetNextSerialNumber(objectId={}) has corrupted db", objectId);
+	        	LOG.info("GetNextSerialNumber(objectId={}) AWS SimpleDB empty result", objectId);
 	        	throw new CertificateAuthorityException();
 	        }
             
@@ -323,7 +334,7 @@ public class AwsCertificateAuthorityStore implements
 			Long counter = new Long(prevcount);
     		counter += 1;
 			List<ReplaceableAttribute> item = new ArrayList<ReplaceableAttribute>();
-	        item.add(new ReplaceableAttribute("SerialCounter", counter.toString(), false));
+	        item.add(new ReplaceableAttribute("SerialCounter", counter.toString(), true));
 	        sdb.putAttributes(new PutAttributesRequest(domainCA, objectId, item, new UpdateCondition("SerialCounter", prevcount, true)));
 	        return counter-1;
 		} catch (AmazonClientException e) {
@@ -360,8 +371,11 @@ public class AwsCertificateAuthorityStore implements
 		String selectExpression;
 		List<Item> items;
 		verify();
-		selectExpression = "select * from `" + domainIssued + "` where IASN = '" + iasn.toString() + "'";
-		SelectRequest selectRequest = new SelectRequest(selectExpression);
+		selectExpression = "select * from `" + domainIssued + "` where IASNDEV = '" 
+				+ new IssuerAndSerialNumberHolder(iasn).toString() + "'";
+		SelectRequest selectRequest = new SelectRequest(selectExpression)
+										.withConsistentRead(true);
+		String iasnString = new IssuerAndSerialNumberHolder(iasn).toString();
 		try {
 			items = sdb.select(selectRequest).getItems();
 			if (items.size() == 1) {
@@ -370,11 +384,15 @@ public class AwsCertificateAuthorityStore implements
 				String parentId = null;
 				
                 for (Attribute attribute : item.getAttributes()) {
-                	if (attribute.getName() == "ParentId") {
+                	if (attribute.getName().equals("ParentId")) {
                 		parentId = attribute.getValue();
                 		break;
                 	}
                 }
+                if (parentId == null) {
+        			LOG.error("GetDeviceIssued(IASN={}) AWS SimpleDB empty result", iasnString);
+    	        	throw new CertificateAuthorityException();
+    	        }
                 
 	            S3Object object = s3.getObject(new GetObjectRequest(bucketIssued, objectId+"/auth/device"));		    	
 		        X509Certificate cert = new JcaX509CertificateConverter().
@@ -388,7 +406,7 @@ public class AwsCertificateAuthorityStore implements
                 return new IssuedCertificateResult(ca, cert, objectId);
 			}
 		} catch (AmazonClientException e) {
-			LOG.error("GetCA(IASN={}) AWS s3/sdb exception - {}", iasn.toString(), e.getMessage());
+			LOG.error("GetDeviceIssued(IASN={}) AWS s3/sdb exception - {}", iasnString, e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 		return null;
@@ -403,16 +421,22 @@ public class AwsCertificateAuthorityStore implements
 			CertificateAuthorityException {
 		verify();
 		try {
-			
-			GetAttributesResult result = sdb.getAttributes(new GetAttributesRequest(domainIssued, objectId));
+			GetAttributesResult result = sdb.getAttributes(
+					new GetAttributesRequest(domainIssued, objectId)
+					.withAttributeNames("ParentId")
+					.withConsistentRead(true));
 			
 			String parentId = null;
             for (Attribute attribute : result.getAttributes()) {
-            	if (attribute.getName() == "ParentId") {
+            	if (attribute.getName().equals("ParentId")) {
             		parentId = attribute.getValue();
             		break;
             	}
             }
+            if (parentId == null) {
+    			LOG.info("GetDeviceIssued(objectId={}) AWS SimpleDB empty result", objectId.toString());
+	        	throw new CertificateAuthorityException();
+	        }
                 
             S3Object object = s3.getObject(new GetObjectRequest(bucketIssued, objectId+"/auth/device"));		    	
 	        X509Certificate cert = new JcaX509CertificateConverter().
@@ -425,7 +449,7 @@ public class AwsCertificateAuthorityStore implements
             CertificateAuthority ca = getCA(parentId);
             return new IssuedCertificateResult(ca, cert, objectId);
 		} catch (AmazonClientException e) {
-			LOG.error("GetCA(objectId={}) AWS s3/sdb exception - {}", objectId.toString(), e.getMessage());
+			LOG.error("GetDeviceIssued(objectId={}) AWS s3/sdb exception - {}", objectId.toString(), e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 	}
@@ -441,7 +465,8 @@ public class AwsCertificateAuthorityStore implements
 		List<Item> items;
 		verify();
 		selectExpression = "select * from `" + domainIssued + "` where ICID = '" + issuedCertId.toString() + "'";
-		SelectRequest selectRequest = new SelectRequest(selectExpression);
+		SelectRequest selectRequest = new SelectRequest(selectExpression)
+										.withConsistentRead(true);
 		try {
 			items = sdb.select(selectRequest).getItems();
 			if (items.size() == 1) {
@@ -450,7 +475,7 @@ public class AwsCertificateAuthorityStore implements
 				String parentId = null;
 				
                 for (Attribute attribute : item.getAttributes()) {
-                	if (attribute.getName() == "ParentId") {
+                	if (attribute.getName().equals("ParentId")) {
                 		parentId = attribute.getValue();
                 		break;
                 	}
@@ -468,7 +493,7 @@ public class AwsCertificateAuthorityStore implements
                 return new IssuedCertificateResult(ca, cert, objectId);
 			}
 		} catch (AmazonClientException e) {
-			LOG.error("GetCA(ICID={}) AWS s3/sdb exception - {}", issuedCertId.toString(), e.getMessage());
+			LOG.error("GetDeviceIssued(ICID={}) AWS s3/sdb exception - {}", issuedCertId.toString(), e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 		return null;
@@ -479,7 +504,6 @@ public class AwsCertificateAuthorityStore implements
 	 */
 	@Override
 	public void addIssued(X509Certificate cert,
-			IssuerAndSerialNumber iasn,
 			IssuedCertificateIdentifier issuedCertId, String objectId,
 			String parentId) throws CertificateAuthorityException,
 			GeneralSecurityException, IOException {
@@ -494,6 +518,7 @@ public class AwsCertificateAuthorityStore implements
 			metadata.setCacheControl("no-cache");
 			metadata.setContentDisposition(objectId + "_device.crt");
 			metadata.setContentType("application/x-x509-ca-cert");
+			metadata.setContentLength(fin.available());
 	        s3.putObject(new PutObjectRequest(bucketIssued, blobKey, fin, metadata));
 		} catch (AmazonClientException e) {
 			LOG.info("putIssued(objectId={}) AWS s3 exception(1) - {}", objectId, e.getMessage());
@@ -502,11 +527,12 @@ public class AwsCertificateAuthorityStore implements
 
 		try {
 			List<ReplaceableAttribute> item = new ArrayList<ReplaceableAttribute>();
-	        item.add(new ReplaceableAttribute("IASN", iasn.toString(), true));
+	        item.add(new ReplaceableAttribute("IASNDEV", new IssuerAndSerialNumberHolder(cert).toString(), true));
 	        if (issuedCertId != null)
 		        item.add(new ReplaceableAttribute("ICID", issuedCertId.toString(), true));
-	        else
-		        item.add(new ReplaceableAttribute("ICID", "null", true));
+	        //else
+		    //    item.add(new ReplaceableAttribute("ICID", "null", true));
+	        //item.add(new ReplaceableAttribute("IASNAPP", "null", true));
 	        item.add(new ReplaceableAttribute("ParentId", parentId, true));
 	        sdb.putAttributes(new PutAttributesRequest(domainIssued, objectId, item));
 		} catch (AmazonClientException e) {
@@ -557,19 +583,117 @@ public class AwsCertificateAuthorityStore implements
 		
 		String blobKey = objectId+"/auth/app";
 		ByteArrayInputStream fin;
+		String iasn = new IssuerAndSerialNumberHolder(cert).toString();
 		fin = new ByteArrayInputStream(cert.getEncoded());
 		try {
-			// Set S3 object metadata and upload object data
+			List<ReplaceableAttribute> item = new ArrayList<ReplaceableAttribute>();
+	        item.add(new ReplaceableAttribute("IASNAPP", iasn, true));
+	        sdb.putAttributes(new PutAttributesRequest(domainIssued, objectId, item));
+
+	        // Set S3 object metadata and upload object data
 			ObjectMetadata metadata = new ObjectMetadata();
 			metadata.setCacheControl("no-cache");
 			metadata.setContentDisposition(objectId + "_app.crt");
-			metadata.setContentType("application/x-x509-ca-cert");			
+			metadata.setContentType("application/x-x509-ca-cert");
 	        s3.putObject(new PutObjectRequest(bucketIssued, blobKey, fin, metadata));
 	        
 	        return new IssuedCertificateResult(device.getCa(), cert, objectId);
 		} catch (AmazonClientException e) {
-			LOG.error("SetAppIssued(objectId={}) AWS s3 exception(1) - {}", objectId, e.getMessage());
+			LOG.error("SetAppIssued(objectId={}) AWS s3 exception - {}", objectId, e.getMessage());
 			throw new CertificateAuthorityException(e);
+		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public IssuedCertificateResult getAppIssued(IssuerAndSerialNumber iasn)
+			throws GeneralSecurityException, IOException,
+			CertificateAuthorityException {
+		String selectExpression;
+		List<Item> items;
+		verify();
+		selectExpression = "select * from `" + domainIssued + "` where IASNAPP = '" 
+				+ new IssuerAndSerialNumberHolder(iasn).toString() + "'";
+		SelectRequest selectRequest = new SelectRequest(selectExpression)
+										.withConsistentRead(true);
+		String iasnString = new IssuerAndSerialNumberHolder(iasn).toString();
+		try {
+			items = sdb.select(selectRequest).getItems();
+			if (items.size() == 1) {
+				Item item = items.get(0);
+				String objectId = item.getName();
+				String parentId = null;
+				
+                for (Attribute attribute : item.getAttributes()) {
+                	if (attribute.getName().equals("ParentId")) {
+                		parentId = attribute.getValue();
+                		break;
+                	}
+                }
+                if (parentId == null) {
+        			LOG.error("GetAppIssued(IASN={}) AWS SimpleDB empty result", iasnString);
+    	        	throw new CertificateAuthorityException();
+    	        }
+                
+	            S3Object object = s3.getObject(new GetObjectRequest(bucketIssued, objectId+"/auth/app"));		    	
+		        X509Certificate cert = new JcaX509CertificateConverter().
+		        		getCertificate(new X509CertificateHolder(getBytes(object.getObjectContent())));
+		    
+		        // Release AWS resources
+		        object.close();
+                
+                // Will throw an exception if parentId is null
+                CertificateAuthority ca = getCA(parentId);
+                return new IssuedCertificateResult(ca, cert, objectId);
+			}
+		} catch (AmazonClientException e) {
+			LOG.error("GetAppIssued(IASN={}) AWS s3/sdb exception - {}", iasnString, e.getMessage());
+        	throw new CertificateAuthorityException(e);			
+		}
+		return null;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public IssuedCertificateResult getAppIssued(String objectId)
+			throws GeneralSecurityException, IOException,
+			CertificateAuthorityException {
+		verify();
+		try {
+			GetAttributesResult result = sdb.getAttributes(
+					new GetAttributesRequest(domainIssued, objectId)
+					.withAttributeNames("ParentId")
+					.withConsistentRead(true));
+			
+			String parentId = null;
+            for (Attribute attribute : result.getAttributes()) {
+            	if (attribute.getName().equals("ParentId")) {
+            		parentId = attribute.getValue();
+            		break;
+            	}
+            }
+            if (parentId == null) {
+    			LOG.info("GetAppIssued(objectId={}) AWS SimpleDB empty result", objectId.toString());
+	        	throw new CertificateAuthorityException();
+	        }
+                
+            S3Object object = s3.getObject(new GetObjectRequest(bucketIssued, objectId+"/auth/app"));		    	
+	        X509Certificate cert = new JcaX509CertificateConverter().
+	        		getCertificate(new X509CertificateHolder(getBytes(object.getObjectContent())));
+		    
+	        // Release AWS resources
+	        object.close();
+                
+            // Will throw an exception if parentId is null
+            CertificateAuthority ca = getCA(parentId);
+            return new IssuedCertificateResult(ca, cert, objectId);
+		} catch (AmazonClientException e) {
+			LOG.error("GetAppIssued(objectId={}) AWS s3/sdb exception - {}", objectId.toString(), e.getMessage());
+        	throw new CertificateAuthorityException(e);			
 		}
 	}
 
@@ -627,4 +751,5 @@ public class AwsCertificateAuthorityStore implements
 		// TODO Auto-generated method stub
 		return null;
 	}
+
 }

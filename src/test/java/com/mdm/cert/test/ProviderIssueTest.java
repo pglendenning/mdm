@@ -15,10 +15,7 @@ import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
-
 import javax.security.auth.x500.X500Principal;
 
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -39,11 +36,8 @@ import org.jscep.client.inspect.DefaultCertStoreInspectorFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ProviderIssueTest {
-	private static final Logger LOG = LoggerFactory.getLogger(X509CertificateGeneratorTest.class);
 	private static final String BC = BouncyCastleProvider.PROVIDER_NAME;
 	private static long serialNum = 1;
 	

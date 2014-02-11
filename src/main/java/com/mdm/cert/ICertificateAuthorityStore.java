@@ -17,7 +17,6 @@ public interface ICertificateAuthorityStore {
 	 * in the main store is a Key store with the RA and CA.
 	 * 
 	 * @param	caCert		The X509 self signed V3 root certificate.
-	 * @param	caIasn		The issuer and serial number for the root certificate.
 	 * @param	raCert		The X509 registration certificate.
 	 * @param	raKey		The registration private key.
 	 * @param	nextSerialNumber	The next available serial number for a signing request.
@@ -27,9 +26,9 @@ public interface ICertificateAuthorityStore {
 	 * @throws	GeneralSecurityException if a certificate error occurs
 	 * @throws	IOException if the key store cannot be accessed
 	 */
-	public CertificateAuthority addCA(X509Certificate caCert, IssuerAndSerialNumber caIasn, 
-											 X509Certificate raCert, PrivateKey raKey,
-											 long nextSerialNumber, boolean enabledState, String caObjectId) 
+	public CertificateAuthority addCA(X509Certificate caCert, X509Certificate raCert, 
+								PrivateKey raKey, long nextSerialNumber, 
+								boolean enabledState, String caObjectId) 
 			throws CertificateAuthorityException, GeneralSecurityException, IOException;
 	
 	/**
@@ -132,7 +131,6 @@ public interface ICertificateAuthorityStore {
 	
 	/**
 	 * @param	cert			The issued certificate for the device.
-	 * @param	iasn			The issuer and serial number for the issued device certificate.
 	 * @param	issuedCertId	The issued certificate id for the device.
 	 * @param	objectId		An object id to associate with the certificate.
 	 * @param	caObjectId		The object id of the root certificate authority that signed cert.
@@ -140,8 +138,7 @@ public interface ICertificateAuthorityStore {
 	 * @throws	GeneralSecurityException if a certificate error occurs
 	 * @throws	IOException if the key store cannot be accessed
 	 */
-	public void addIssued(X509Certificate cert, IssuerAndSerialNumber iasn, 
-							IssuedCertificateIdentifier issuedCertId, 
+	public void addIssued(X509Certificate cert, IssuedCertificateIdentifier issuedCertId, 
 							String objectId, String caObjectId)
 			throws CertificateAuthorityException, GeneralSecurityException, IOException;
 	
@@ -195,5 +192,28 @@ public interface ICertificateAuthorityStore {
 	 */
 	public IssuedCertificateResult setAppIssued(X509Certificate cert, String objectId)
 			throws CertificateAuthorityException, GeneralSecurityException, IOException;
+	
+	/**
+	 * Get the issued certificate with the prescribed issuer and serial number.
+	 * @param	iasn	The issuer and serial number.
+	 * @return	A RootCertificateAuthorityResult or null if it does not exist.
+	 * @throws IOException 
+	 * @throws GeneralSecurityException 
+	 * @throws CertificateAuthorityException 
+	 */
+	public IssuedCertificateResult getAppIssued(IssuerAndSerialNumber iasn) 
+			throws GeneralSecurityException, IOException, CertificateAuthorityException;
+	
+	/**
+	 * Get the issued certificate with the prescribed object id.
+	 * @param	objectId	The object id
+	 * @return	A RootCertificateAuthorityResult or null if it does not exist.
+	 * @throws IOException 
+	 * @throws GeneralSecurityException 
+	 * @throws CertificateAuthorityException 
+	 */
+	public IssuedCertificateResult getAppIssued(String objectId)
+			throws GeneralSecurityException, IOException, CertificateAuthorityException;
+	
 	
 }

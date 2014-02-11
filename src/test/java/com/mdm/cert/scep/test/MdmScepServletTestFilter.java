@@ -20,9 +20,9 @@ import javax.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mdm.cert.RSAKeyPair;
+import com.mdm.cert.X509CertificateGenerator;
 import com.mdm.cert.scep.MdmScepServlet;
-import com.mdm.utils.RSAKeyPair;
-import com.mdm.utils.X509CertificateGenerator;
 
 public class MdmScepServletTestFilter implements Filter {
 	private static final Logger LOG = LoggerFactory.getLogger(MdmScepServletTestFilter.class);

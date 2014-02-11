@@ -2,6 +2,7 @@ package com.mdm.auth;
 
 /*
  * Original code https://github.com/mclamp/JAuth
+ * @author sweis@google.com (Steve Weis)
  */
 
 import java.io.ByteArrayInputStream;
@@ -20,9 +21,8 @@ import javax.crypto.Mac;
  *
  * The default passcode is a 6-digit decimal code and the default timeout
  * period is 1 minute.  The default validity window for the passcode +/- 20secs.
- *
- * @author sweis@google.com (Steve Weis)
- * @author Paul Glendenning
+ * 
+ * This class is thread safe.
  */
 public class PasscodeGenerator {
 	/** Default decimal passcode length */
@@ -50,17 +50,29 @@ public class PasscodeGenerator {
 	 * @author Paul Glendenning
 	 */
 	public class Passcode {
-		/** The passcode */
-		public String passcode;
-		/** The number of seconds until the next update */
-		public int nextUpdate;
-		/** The intervals passed since last update */
-		public long intervalsPassed;
+		private String passcode;
+		private int nextUpdate;
+		private long intervalsPassed;
 		
 		Passcode(String passcode, int nextUpdate, long intervalsPassed) {
 			this.passcode = passcode;
 			this.nextUpdate = nextUpdate;
 			this.intervalsPassed = intervalsPassed;
+		}
+		
+		/** The passcode */
+		public String getPasscode() {
+			return passcode;
+		}
+		
+		/** The number of seconds until the next update */
+		public int getNextUpdate() {
+			return nextUpdate;
+		}
+		
+		/** The intervals passed since last update */
+		public long getIntervalsPassed() {
+			return intervalsPassed;
 		}
 	}
 
@@ -155,8 +167,10 @@ public class PasscodeGenerator {
 	 */
 	public String generateResponseCode(byte[] challenge)
 			throws GeneralSecurityException {
-		byte[] hash = signer.sign(challenge);
-
+		byte[] hash;
+		synchronized(this) {
+			hash = signer.sign(challenge);
+		}
 		// Dynamically truncate the hash
 		// OffsetBits are the low order bits of the last byte of the hash
 		int offset = hash[hash.length - 1] & 0xf; // Only works with HmacSHA1

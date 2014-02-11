@@ -1,6 +1,11 @@
 package com.mdm.ios;
 
-import com.mdm.utils.*;
+import com.mdm.cert.CertificateVerificationException;
+import com.mdm.cert.CertificateVerificationResult;
+import com.mdm.cert.PKCS7Signer;
+import com.mdm.cert.PKCS7Verifier;
+import com.mdm.utils.BasicNonceGenerator;
+import com.mdm.utils.MdmServiceProperties;
 import com.dd.plist.PropertyListParser;
 import com.dd.plist.NSObject;
 import com.dd.plist.NSDictionary;

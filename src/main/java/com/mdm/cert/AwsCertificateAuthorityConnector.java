@@ -37,28 +37,18 @@ public class AwsCertificateAuthorityConnector implements
 		ICertificateAuthorityConnector {
 
 	private static final Logger LOG = LoggerFactory.getLogger(AwsCertificateAuthorityConnector.class);
-	private static final String BC = BouncyCastleProvider.PROVIDER_NAME;
-	private AmazonSimpleDB sdb = null;
-	private String domainCA = null;		// Simple DB domain for CA
 	private String objectId = null;
 	private Region region = null;
+	private ICertificateAuthorityStore store;
 	
 	public AwsCertificateAuthorityConnector(String objectId, Region region) {
-		this.sdb = new AmazonSimpleDBClient(new AwsMdmPropertiesCredentialsProvider());
-        this.sdb.setRegion(region);
-		this.domainCA = MdmServiceProperties.getProperty(MdmServiceKey.awsSimpleDbRootCertificateAuthorityDomain);
 		this.objectId = objectId;
 		this.region = region;
+		this.store = getStoreInstance();
 	}
 
 	public AwsCertificateAuthorityConnector(String objectId) {
 		this(objectId, Region.getRegion(Regions.US_WEST_2));
-	}
-	
-	private void verify() throws CertificateAuthorityException {
-		if (domainCA == null || objectId == null) {
-			throw new CertificateAuthorityException();
-		}
 	}
 	
 	/**
@@ -119,34 +109,7 @@ public class AwsCertificateAuthorityConnector implements
 	 */
 	@Override
 	public long getNextSerialNumber() throws CertificateAuthorityException {
-		verify();
-		try {			
-			GetAttributesResult result = sdb.getAttributes(new GetAttributesRequest(domainCA, objectId));
-			
-			String prevcount = null;
-            for (Attribute attribute : result.getAttributes()) {
-            	if (attribute.getName() == "SerialCounter") {
-            		prevcount = attribute.getValue();
-            		break;
-            	}
-            }
-            
-            if (prevcount == null) {
-	        	LOG.error("GetNextSerialNumber(objectId={}) has corrupted db", objectId);
-	        	throw new CertificateAuthorityException();
-	        }
-            
-            // Do a conditional put
-			Long counter = new Long(prevcount);
-    		counter += 1;
-			List<ReplaceableAttribute> item = new ArrayList<ReplaceableAttribute>();
-	        item.add(new ReplaceableAttribute("SerialCounter", counter.toString(), false));
-	        sdb.putAttributes(new PutAttributesRequest(domainCA, objectId, item, new UpdateCondition("SerialCounter", prevcount, true)));
-	        return counter-1;
-		} catch (AmazonClientException e) {
-			LOG.error("GetNextSerialNumber(objectId={}) AWS sdb exception - {}", objectId.toString(), e.getMessage());
-        	throw new CertificateAuthorityException(e);			
-		}
+		return store.getNextSerialNumber(objectId);
 	}
 
 	/**

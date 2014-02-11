@@ -23,9 +23,9 @@ public class ObjectIdentifier {
 	 * @return	The object id string.
 	 */
 	public static String getInstance() {
-		//                      0         1         2         3 
-		//                      01234567890123456789012345678901
-		// 5-bits per character 0123456789abcdefghijklmnpqrstuvw
+		//                 0         1         2         3 
+		//                 01234567890123456789012345678901
+		// RFC 4668/3548   abcdefghijklmnopqrstuvwxyz234567" 
 		return new BigInteger(ID_LENGTH*5, generator).toString(32);
 	}
 	
@@ -35,9 +35,9 @@ public class ObjectIdentifier {
 	 * @return	The object id string.
 	 */
 	public static String getInstance(int length) {
-		//                      0         1         2         3 
-		//                      01234567890123456789012345678901
-		// 5-bits per character 0123456789abcdefghijklmnpqrstuvw
+		//                 0         1         2         3 
+		//                 01234567890123456789012345678901
+		// RFC 4668/3548   abcdefghijklmnopqrstuvwxyz234567" 
 		if (length <= 0)
 			throw new IllegalArgumentException();
 
