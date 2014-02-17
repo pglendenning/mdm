@@ -9,14 +9,14 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 public class RegisterParentRequestData {
 	
-	public String	user;	// parse.com user id
+	public String	user;	// user id, this will be the password on the PKCS12 container
 	public String	name;	// friendly name
 	public String	city;	// X500Name L
 	public String	state;	// X500Name ST
 	public String	country;// X500Name C
 	
 	public RegisterParentRequestData() {
-		// Required for 
+		// Required for beans
 	}
 	
 	public RegisterParentRequestData(String user, String name, String city, String state, String country) {
@@ -72,7 +72,7 @@ public class RegisterParentRequestData {
 	 * @return	True if there are no missing parameters.
 	 */
 	public boolean isComplete() {
-		return city != null && !city.isEmpty() && country == null &&
+		return city != null && !city.isEmpty() && country != null &&
 			   !country.isEmpty() && state != null && !state.isEmpty() &&
 				name != null && !name.isEmpty() &&
 				user != null && !user.isEmpty();

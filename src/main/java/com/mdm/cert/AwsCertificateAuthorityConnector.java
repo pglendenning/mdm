@@ -4,30 +4,9 @@
 package com.mdm.cert;
 
 import java.security.cert.X509CRL;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
-
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.simpledb.AmazonSimpleDB;
-import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
-import com.amazonaws.services.simpledb.model.Attribute;
-import com.amazonaws.services.simpledb.model.GetAttributesRequest;
-import com.amazonaws.services.simpledb.model.GetAttributesResult;
-import com.amazonaws.services.simpledb.model.PutAttributesRequest;
-import com.amazonaws.services.simpledb.model.ReplaceableAttribute;
-import com.amazonaws.services.simpledb.model.UpdateCondition;
-import com.mdm.auth.AwsMdmPropertiesCredentialsProvider;
-import com.mdm.utils.MdmServiceKey;
-import com.mdm.utils.MdmServiceProperties;
 
 /**
  * @author paul
@@ -36,7 +15,6 @@ import com.mdm.utils.MdmServiceProperties;
 public class AwsCertificateAuthorityConnector implements
 		ICertificateAuthorityConnector {
 
-	private static final Logger LOG = LoggerFactory.getLogger(AwsCertificateAuthorityConnector.class);
 	private String objectId = null;
 	private Region region = null;
 	private ICertificateAuthorityStore store;

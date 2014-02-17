@@ -163,8 +163,10 @@ public class AwsCertificateAuthorityStore implements
 	        item.add(new ReplaceableAttribute("Enabled", new Boolean(enabledState).toString(), true));
 	        item.add(new ReplaceableAttribute("CertNotAfter", notAfter, true));
 	        item.add(new ReplaceableAttribute("CertNotBefore", notBefore, true));
-	        item.add(new ReplaceableAttribute("Lock", new Boolean(false).toString(), true));
-	        sdb.putAttributes(new PutAttributesRequest(domainCA, objectId, item));
+	        // Use update condition to ensure we never overwrite an existing entry
+	        sdb.putAttributes(new PutAttributesRequest(domainCA, objectId, item, 
+	        		new UpdateCondition().withName("SerialCounter")
+	        		.withExists(false)));
 			
 	        ca = new CertificateAuthority(new AwsCertificateAuthorityConnector(objectId, region), caCert, raCert, raKey);
 		} catch (AmazonClientException e) {
@@ -212,7 +214,7 @@ public class AwsCertificateAuthorityStore implements
 			sdb.deleteAttributes(new DeleteAttributesRequest(domainCA, objectId));
 			
 		} catch (AmazonClientException e) {
-			LOG.error("DeleteCA(objectId{}) AWS s3/sdb exception - {}", objectId, e.getMessage());
+			LOG.info("DeleteCA(objectId{}) AWS s3/sdb exception - {}", objectId, e.getMessage());
 			throw new CertificateAuthorityException(e);	
 		}
 	}
@@ -255,12 +257,12 @@ public class AwsCertificateAuthorityStore implements
 			        					(X509Certificate)certs[0], (PrivateKey)key);
 			        return ca;
 		        } else {
-		        	LOG.error("GetCA(IASN={}, objectId={}) has corrupted cert store", iasn.toString(), objectId);
+		        	LOG.info("GetCA(IASN={}, objectId={}) has corrupted cert store", iasn.toString(), objectId);
 		        	throw new CertificateAuthorityException();
 		        }
 			}
 		} catch (AmazonClientException e) {
-			LOG.error("GetCA(IASN={}) AWS s3/sdb exception - {}", iasn.toString(), e.getMessage());
+			LOG.info("GetCA(IASN={}) AWS s3/sdb exception - {}", iasn.toString(), e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 		return null;
@@ -289,7 +291,7 @@ public class AwsCertificateAuthorityStore implements
 	        Certificate[] certs = store.getCertificateChain(objectId);
 	        
 	        if (certs.length != 2) {
-	        	LOG.error("GetCA(objectId={}) has corrupted cert store", objectId);
+	        	LOG.info("GetCA(objectId={}) has corrupted cert store", objectId);
 	        	throw new CertificateAuthorityException();
 	        }
 	        certs[0].verify(certs[1].getPublicKey());
@@ -300,7 +302,7 @@ public class AwsCertificateAuthorityStore implements
 	        					(X509Certificate)certs[0], (PrivateKey)key);
 	        return ca;
 		} catch (AmazonClientException e) {
-			LOG.error("GetCA(objectId={}) AWS s3/sdb exception - {}", objectId, e.getMessage());
+			LOG.info("GetCA(objectId={}) AWS s3/sdb exception - {}", objectId, e.getMessage());
         	throw new CertificateAuthorityException(e);						
 		}
 	}
@@ -338,7 +340,7 @@ public class AwsCertificateAuthorityStore implements
 	        sdb.putAttributes(new PutAttributesRequest(domainCA, objectId, item, new UpdateCondition("SerialCounter", prevcount, true)));
 	        return counter-1;
 		} catch (AmazonClientException e) {
-			LOG.error("GetNextSerialNumber(objectId={}) AWS sdb exception - {}", objectId.toString(), e.getMessage());
+			LOG.info("GetNextSerialNumber(objectId={}) AWS sdb exception - {}", objectId.toString(), e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 	}
@@ -390,7 +392,7 @@ public class AwsCertificateAuthorityStore implements
                 	}
                 }
                 if (parentId == null) {
-        			LOG.error("GetDeviceIssued(IASN={}) AWS SimpleDB empty result", iasnString);
+        			LOG.info("GetDeviceIssued(IASN={}) AWS SimpleDB empty result", iasnString);
     	        	throw new CertificateAuthorityException();
     	        }
                 
@@ -406,7 +408,7 @@ public class AwsCertificateAuthorityStore implements
                 return new IssuedCertificateResult(ca, cert, objectId);
 			}
 		} catch (AmazonClientException e) {
-			LOG.error("GetDeviceIssued(IASN={}) AWS s3/sdb exception - {}", iasnString, e.getMessage());
+			LOG.info("GetDeviceIssued(IASN={}) AWS s3/sdb exception - {}", iasnString, e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 		return null;
@@ -449,7 +451,7 @@ public class AwsCertificateAuthorityStore implements
             CertificateAuthority ca = getCA(parentId);
             return new IssuedCertificateResult(ca, cert, objectId);
 		} catch (AmazonClientException e) {
-			LOG.error("GetDeviceIssued(objectId={}) AWS s3/sdb exception - {}", objectId.toString(), e.getMessage());
+			LOG.info("GetDeviceIssued(objectId={}) AWS s3/sdb exception - {}", objectId.toString(), e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 	}
@@ -493,7 +495,7 @@ public class AwsCertificateAuthorityStore implements
                 return new IssuedCertificateResult(ca, cert, objectId);
 			}
 		} catch (AmazonClientException e) {
-			LOG.error("GetDeviceIssued(ICID={}) AWS s3/sdb exception - {}", issuedCertId.toString(), e.getMessage());
+			LOG.info("GetDeviceIssued(ICID={}) AWS s3/sdb exception - {}", issuedCertId.toString(), e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 		return null;
@@ -564,7 +566,7 @@ public class AwsCertificateAuthorityStore implements
 			s3.deleteObject(bucketIssued, objectId+"/auth/device");
 			sdb.deleteAttributes(new DeleteAttributesRequest(domainIssued, objectId));
 		} catch (AmazonClientException e) {
-			LOG.error("DeleteIssued(objectId{}) AWS s3/sdb exception - {}", objectId, e.getMessage());
+			LOG.info("DeleteIssued(objectId{}) AWS s3/sdb exception - {}", objectId, e.getMessage());
 			throw new CertificateAuthorityException(e);	
 		}
 	}
@@ -599,7 +601,7 @@ public class AwsCertificateAuthorityStore implements
 	        
 	        return new IssuedCertificateResult(device.getCa(), cert, objectId);
 		} catch (AmazonClientException e) {
-			LOG.error("SetAppIssued(objectId={}) AWS s3 exception - {}", objectId, e.getMessage());
+			LOG.info("SetAppIssued(objectId={}) AWS s3 exception - {}", objectId, e.getMessage());
 			throw new CertificateAuthorityException(e);
 		}
 	}
@@ -633,7 +635,7 @@ public class AwsCertificateAuthorityStore implements
                 	}
                 }
                 if (parentId == null) {
-        			LOG.error("GetAppIssued(IASN={}) AWS SimpleDB empty result", iasnString);
+        			LOG.info("GetAppIssued(IASN={}) AWS SimpleDB empty result", iasnString);
     	        	throw new CertificateAuthorityException();
     	        }
                 
@@ -649,7 +651,7 @@ public class AwsCertificateAuthorityStore implements
                 return new IssuedCertificateResult(ca, cert, objectId);
 			}
 		} catch (AmazonClientException e) {
-			LOG.error("GetAppIssued(IASN={}) AWS s3/sdb exception - {}", iasnString, e.getMessage());
+			LOG.info("GetAppIssued(IASN={}) AWS s3/sdb exception - {}", iasnString, e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 		return null;
@@ -692,7 +694,7 @@ public class AwsCertificateAuthorityStore implements
             CertificateAuthority ca = getCA(parentId);
             return new IssuedCertificateResult(ca, cert, objectId);
 		} catch (AmazonClientException e) {
-			LOG.error("GetAppIssued(objectId={}) AWS s3/sdb exception - {}", objectId.toString(), e.getMessage());
+			LOG.info("GetAppIssued(objectId={}) AWS s3/sdb exception - {}", objectId.toString(), e.getMessage());
         	throw new CertificateAuthorityException(e);			
 		}
 	}

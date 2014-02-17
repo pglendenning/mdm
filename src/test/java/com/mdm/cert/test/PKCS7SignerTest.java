@@ -4,33 +4,16 @@ import static org.junit.Assert.*;
 
 import java.math.BigInteger;
 import java.nio.charset.Charset;
-import java.security.KeyFactory;
-import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.Security;
-import java.security.cert.CertStore;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-
-import javax.security.auth.x500.X500Principal;
-
-import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
-import org.bouncycastle.cert.jcajce.JcaCertStoreBuilder;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.Store;
 import org.bouncycastle.util.encoders.Base64;
-import org.bouncycastle.x509.NoSuchParserException;
-import org.bouncycastle.x509.X509CollectionStoreParameters;
-import org.bouncycastle.x509.X509Store;
-import org.bouncycastle.x509.X509StreamParser;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

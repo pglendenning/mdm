@@ -15,14 +15,11 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.mdm.cert.RSAKeyPair;
 import com.mdm.cert.X509CertificateGenerator;
 
 public class X509CertificateGeneratorTest {
-	private static final Logger LOG = LoggerFactory.getLogger(X509CertificateGeneratorTest.class);
 	private static final String BC = BouncyCastleProvider.PROVIDER_NAME;
 	
 	@Before
@@ -90,7 +87,7 @@ public class X509CertificateGeneratorTest {
 	        while (enumeration.hasMoreElements()) {
 	            String alias = (String)enumeration.nextElement();
 	            //LOG.debug("alias name: {}", alias);
-	            Certificate certificate = store.getCertificate(alias);
+	            store.getCertificate(alias);
 	            //LOG.debug(certificate.toString());
 	            ++i;
 	        }

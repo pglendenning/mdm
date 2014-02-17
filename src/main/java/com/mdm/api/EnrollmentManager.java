@@ -3,12 +3,16 @@ package com.mdm.api;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.LinkedList;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -83,21 +87,32 @@ public class EnrollmentManager {
 	}
 	
 	/**
-	 * Extract the CN part of the subject distinguished name.
-	 * @return	The object id.
+	 * Check the hash of the organization and objectId. The Md5 hash of this value
+	 * must equal the common name.
+	 * @return	True if the certificate is valid.
 	 * @throws 	InvalidObjectIdException
 	 */
-	public static String getObjectIdFromCertifcate(X509Certificate cert) throws InvalidObjectIdException {
+	public static boolean validateCertifcate(String objectId, X509Certificate cert) throws InvalidObjectIdException {
 		X500Name name;
 		try {
 			name = new JcaX509CertificateHolder(cert).getIssuer();			
 		} catch (Exception e) {
 			throw new InvalidObjectIdException();
 		}
-		RDN[] org = name.getRDNs(BCStyle.CN);
-		if (org.length == 0)
+		RDN[] cn = name.getRDNs(BCStyle.CN);
+		RDN[] org = name.getRDNs(BCStyle.O);
+		if (cn.length == 0 || org.length == 0)
 			throw new InvalidObjectIdException();
-		return IETFUtils.valueToString(org[0].getFirst().getValue());
+		String hash = IETFUtils.valueToString(cn[0].getFirst().getValue());
+		String friendlyName = IETFUtils.valueToString(org[0].getFirst().getValue());
+		
+		try {
+			Mac mac = Mac.getInstance("HmacMD5");
+			mac.init(new SecretKeySpec(objectId.getBytes("UTF-8"), "HmacMD5"));
+			return hash.equals(new BigInteger(mac.doFinal(friendlyName.getBytes())).toString(32));
+		} catch (Exception e) {
+			throw new InvalidObjectIdException(e);
+		}
 	}
 	
 	/**
@@ -106,10 +121,10 @@ public class EnrollmentManager {
 	 * @return	A PKCS12 container encoded as byte array.
 	 * @throws CertificateAuthorityException 
 	 */
-	public byte[] registerParentDevice(RegisterParentRequestData data) throws OperationFailedException {
+	public RegisterParentResponseData registerParentDevice(RegisterParentRequestData data) throws OperationFailedException {
 		// Should have checked in caller
-		if (data.isComplete())
-			return null;
+		if (!data.isComplete())
+			throw new OperationFailedException();
 		
 		// Create a new parent identifier
 		boolean objExists = false;
@@ -129,8 +144,6 @@ public class EnrollmentManager {
 
 		// Create a root V3 certificate for CA and RA
 		
-		// FIXME: Have no way to return objectId.
-		/*
 		// Create a unique common name but don't expose object key. This
 		// ensures the issuer name is unique.
 		String cn = null;
@@ -141,10 +154,9 @@ public class EnrollmentManager {
 		} catch (Exception e) {
 			throw new OperationFailedException(e);
 		}
-		*/
 		
 		String issuerDN = String.format("CN=%1$s, L=%2$s, ST=%3$s, C=%4$s, O=%5$s, OU=MDM Authority",
-							objectId, data.getCity(), data.getState(),
+							cn, data.getCity(), data.getState(),
 							data.getCountry(), data.getFriendlyName());
 		String crlBaseURL = String.format(crlFormat, objectId);
 		String raSubjectDN = String.format("C=US,L=Woodside,ST=California,O=%1$s,OU=RA,CN=mdm.mdm4all.com",
@@ -194,7 +206,7 @@ public class EnrollmentManager {
 			LOG.info("Failed registerParentDevice({}) with id({}) - {}.({})", issuerDN, objectId, e.getClass().toString(), e.getMessage());
 			throw new OperationFailedException();
 		}		
-		return os.toByteArray();
+		return new RegisterParentResponseData(objectId, os.toByteArray());
 	}
 	
 	/**

@@ -1,6 +1,5 @@
 package com.mdm.api.rest;
 
-import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 
 import javax.annotation.PostConstruct;
@@ -13,6 +12,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.ProduceMime;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -26,8 +26,6 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.mdm.api.EnrollDeviceRequestData;
 import com.mdm.api.EnrollDeviceResponseData;
@@ -39,7 +37,7 @@ import com.mdm.api.InvalidObjectIdException;
 import com.mdm.api.OperationFailedException;
 import com.mdm.api.OperationNotAllowedException;
 import com.mdm.api.EnrollmentManager;
-import com.sun.ws.rest.api.NotFoundException;
+import com.mdm.cert.AwsCertificateAuthorityStore;
 
 /** Handler for:
  * - POST:   /enroll/parent-id
@@ -47,7 +45,6 @@ import com.sun.ws.rest.api.NotFoundException;
  */
 @Path("/enroll")
 public class EnrollmentHandler {
-	private static final Logger LOG = LoggerFactory.getLogger(EnrollmentHandler.class);	
 
 	// Allows to insert contextual objects into the class, 
 	// e.g. , Request, Response, UriInfo
@@ -60,16 +57,23 @@ public class EnrollmentHandler {
 	@Context
 	ServletContext servletContext;
 	
+	EnrollmentManager enrollManager;
+
 	public EnrollmentHandler() {
 		// TODO Auto-generated constructor stub
 	}
 
-	EnrollmentManager enrollManager;
-
+	// For testing.
+	public void setEnrollmentManager(EnrollmentManager mgr) {
+		enrollManager = mgr;
+	}
+	
 	@PostConstruct
 	public void init() {
-		
-		enrollManager = (EnrollmentManager)servletContext.getAttribute("enrollManager");
+		if (servletContext != null)
+			enrollManager = (EnrollmentManager)servletContext.getAttribute("enrollManager");
+		else
+			setEnrollmentManager(new EnrollmentManager(new AwsCertificateAuthorityStore()));
         if (enrollManager == null)
         	throw new WebApplicationException();
 	}
