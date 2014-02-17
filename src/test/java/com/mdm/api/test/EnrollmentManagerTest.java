@@ -17,6 +17,7 @@ import org.junit.Test;
 
 import com.mdm.api.EnrollmentManager;
 import com.mdm.api.RegisterParentRequestData;
+import com.mdm.api.RegisterParentResponseData;
 import com.mdm.cert.AwsCertificateAuthorityStore;
 import com.mdm.cert.CertificateAuthority;
 import com.mdm.utils.MdmServiceProperties;
@@ -55,9 +56,10 @@ public class EnrollmentManagerTest {
 		RegisterParentRequestData data = new RegisterParentRequestData("abcdef", "EnrollmentManagerTest", "Woodside", "California", "US");
 		int i = 0;
 		KeyStore keystore = null;
+		String objectId = null;
 		try {
-			byte[] result = mgr.registerParentDevice(data);
-			ByteArrayInputStream fin = new ByteArrayInputStream(result);
+			RegisterParentResponseData result = mgr.registerParentDevice(data);
+			ByteArrayInputStream fin = new ByteArrayInputStream(result.getPkcs12());
 			keystore = KeyStore.getInstance("PKCS12", BC);
 	
 			keystore.load(fin, data.getUserId().toCharArray());
@@ -67,6 +69,7 @@ public class EnrollmentManagerTest {
 	            enumeration.nextElement();
 	            ++i;
 	        }
+	        objectId = result.getObjectId();
 		} catch (Exception e) {
 			fail("Exception:" + e.getMessage());
 		}
@@ -92,12 +95,13 @@ public class EnrollmentManagerTest {
 		}
 		
 		X509Certificate caCert = (X509Certificate)certs[0];
-		String objectId = null;
+		boolean verified = false;
 		try {
-			objectId = EnrollmentManager.getObjectIdFromCertifcate(caCert);
+			verified = EnrollmentManager.validateCertifcate(objectId, caCert);
 		} catch (Exception e) {
 			fail("Exception:" + e.getMessage());
 		}
+		assertTrue(verified);
 		CertificateAuthority ca = null;
 		AwsCertificateAuthorityStore store = new AwsCertificateAuthorityStore();
 		try {
