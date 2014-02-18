@@ -18,8 +18,7 @@ public class CertificateAuthority {
 	private X509Certificate raCert = null;
 	private PrivateKey raKey = null;
 	
-	
-	CertificateAuthority(ICertificateAuthorityConnector connector, X509Certificate caCert, X509Certificate raCert, PrivateKey raKey) {
+	public CertificateAuthority(ICertificateAuthorityConnector connector, X509Certificate caCert, X509Certificate raCert, PrivateKey raKey) {
 		this.connector = connector;
 		this.caCert = caCert;
 		this.raCert = raCert;

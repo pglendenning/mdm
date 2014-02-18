@@ -9,8 +9,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
-import javax.crypto.Mac;
-
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 import com.mdm.auth.PasscodeGenerator;

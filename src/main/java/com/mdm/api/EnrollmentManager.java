@@ -230,12 +230,12 @@ public class EnrollmentManager {
 	/**
 	 * Return a time code signer hashed with the objectId.
 	 * @param	objectId	The object id.
-	 * @return	A Time code signer using the HmacMd5 algorithm.
+	 * @return	A Time code signer using the HmacSHA1 algorithm.
 	 * @throws NoSuchAlgorithmException
 	 * @throws UnsupportedEncodingException 
 	 * @throws InvalidKeyException 
 	 */
-	public TimecodeSigner getTimecodeSigner(String objectId) throws NoSuchAlgorithmException, InvalidKeyException, UnsupportedEncodingException {
+	public static TimecodeSigner getTimecodeSigner(String objectId) throws NoSuchAlgorithmException, InvalidKeyException, UnsupportedEncodingException {
 		return new TimecodeSigner(objectId);
 	}
 	

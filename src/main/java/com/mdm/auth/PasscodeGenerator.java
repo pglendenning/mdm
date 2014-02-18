@@ -80,7 +80,7 @@ public class PasscodeGenerator {
 	 * Using an interface to allow us to inject different signature
 	 * implementations.
 	 */
-	interface Signer {
+	public interface Signer {
 		byte[] sign(byte[] data) throws GeneralSecurityException;
 	}
 	
@@ -141,7 +141,8 @@ public class PasscodeGenerator {
 	 * @return	A decimal timeout code
 	 */
 	public Passcode generateTimeoutCode() throws GeneralSecurityException {
-		long time = clock.getTime();
+		IntervalClock c = getClock();
+		long time = c.getTime();
 		long interval = time / intervalPeriod;
 		long intervalsPassed = interval - lastInterval;
 		lastInterval = interval;
@@ -251,7 +252,7 @@ public class PasscodeGenerator {
 	 */
 	public boolean verifyTimeoutCode(String timeoutCode, int pastValid,
 			int futureValid) throws GeneralSecurityException {
-		long time = clock.getTime();
+		long time = getClock().getTime();
 		for (long i=getInterval(time-pastValid), imax=getInterval(time+futureValid); i <= imax; i++) {
 			String expectedResponse = generateResponseCode(i);
 			if (expectedResponse.equals(timeoutCode)) {
@@ -273,7 +274,11 @@ public class PasscodeGenerator {
 	/**
 	 * To facilitate injecting a mock clock.
 	 */
-	interface IntervalClock {
+	public interface IntervalClock {
 		public long getTime();
+	}
+	
+	public IntervalClock getClock() {
+		return clock;
 	}
 }
